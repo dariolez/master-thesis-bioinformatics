@@ -1,0 +1,582 @@
+---
+execute:
+  eval: false
+---
+
+# Trajectory inference {#sec-trajectory-inference}
+
+## RNA velocity
+
+### Prepare input for scvelo
+
+We are going to use the package `scvelo` to perform RNA velocity of the data. This is a python package that forms part of the [scverse ecosystem](https://scverse.org/) for scRNA analysis. In the scverse, 3 types of data structures are used: anndata, mudata and spatialdata. Scvelo uses the anndata, which is used for normal scRNA-seq.
+
+There are 2 tutorials that explain the anndata format: [this one](https://scverse-tutorials.readthedocs.io/en/latest/notebooks/anndata_getting_started.html) from the scverse wiki and [this one](https://anndata.readthedocs.io/en/latest/tutorials/notebooks/getting-started.html) from the anndata wiki.
+
+In order to use scvelo, we need to input an anndata object, so we have to transform our combined Seurat Object to h5ad. I'm going to use the package `SeuratDisk` for this purpose. 
+
+::: {.callout-note}
+I have to modify the Seurat Object so that SeuratDisk saves it correctly. Because by default `Convert()` saves values that we are not interested in. This behaviour is explained in its help page.
+
+> • ‘X’ will be filled with ‘scale.data’ if ‘scale.data’ is present; otherwise, it will be filled with ‘data’
+> • ‘raw.X’ will be filled with ‘data’ if ‘X’ is filled with ‘scale.data’; otherwise, it will be filled with ‘counts’. If ‘counts’ is not present, then ‘raw’ will not be filled
+
+Modifications:
+
+A) Remove `scale.data` in all assays: `seuratobject@assays$name@scale.data <- matrix(nrow = 0, ncol = 0)`. (Because it includes less genes than the raw counts)
+B) Change the counts `dgCMatrix` so that the values are 'integer' instead of 'numeric' class. (Numeric can store decimal numbers, so the anndata object actually stores floating points instead of integers, and they are slightly different to the integers)
+C) Overwrite `data` with the raw `counts`: `seuratobject@assays$name@data <- seuratobject@assays$name@counts`. (Normalization will be performed with scvelo)
+:::
+
+```{r}
+### CONVERSION INTO h5ad OBJECT (export to scvelo):
+
+# Load library
+# facilitates conversion between h5Seurat and AnnData objects, i.e. interoperability between Seurat and Scanpy
+library(SeuratDisk)
+
+# Update Seurat Object (the paper object is too old for SeuratDisk to convert)
+# This makes sure the object has all the slots it should and correct errors in the structure
+hca_esoph <- UpdateSeuratObject(hca_esoph)
+
+# Make sure the papers assay is the default (it should already be)
+DefaultAssay(hca_esoph) <- "RNA"
+
+# CHANGE THE SEURAT OBJECT FOR CORRECT CONVERSION
+#  Remove scale.data and data from the assays
+remove_scaledata <- function(assay) {
+    assay@scale.data <- matrix(nrow = 0, ncol = 0)
+    return(assay)
+}
+
+counts_to_integer <- function(assay) {
+    assay@counts@x <- as.integer(assay@counts@x)
+    return(assay)
+}
+
+remove_normalization <- function(assay) {
+    assay@data <- assay@counts
+    return(assay)
+}
+
+hca_esoph@assays <- lapply(hca_esoph@assays, remove_scaledata)
+hca_esoph@assays <- lapply(hca_esoph@assays, counts_to_integer)
+hca_esoph@assays <- lapply(hca_esoph@assays, remove_normalization)
+
+# Add a new metadata column so that cell types are stored as strings, and not as numbers in the anndata
+hca_esoph@meta.data$Celltypes_2020_names <- as.character(hca_esoph@meta.data$Celltypes_updated_July_2020)
+
+# Convert Seurat to H5AD
+SaveH5Seurat(hca_esoph, filename = "results/hca_myesoph.h5Seurat", overwrite = TRUE)
+Convert("results/hca_myesoph.h5Seurat", dest = "h5ad", overwrite = TRUE)
+```
+
+### Using scvelo
+
+Scvelo has 3 approaches to calculate RNA velocity, these are explained in detail [here](https://scvelo.readthedocs.io/en/stable/about.html#rna-velocity-models):
+
+- **steady-state/deterministic**: the original implementation in La Manno et al paper (2018)
+- **stochastic**: a more modern approach by Bergen et al (2020)
+- **dynamical**: the approach proposed by scvelo developers in Bergen et al (2020)
+
+I'm going to use all of the approaches.
+
+```{python}
+import scanpy as sp
+import scvelo as scv
+
+# Funtions to quickly save plots
+def save_stream(adata, file, format=["svg", "png"], **kwargs):
+    for extension in format:
+        file_name = file + "." + extension
+        scv.pl.velocity_embedding_stream(adata, save = file_name, **kwargs)
+
+def save_grid(adata, file, format=["svg", "png"], **kwargs):
+    for extension in format:
+        file_name = file + "." + extension
+        scv.pl.velocity_embedding_grid(adata, save = file_name, **kwargs)  
+
+def save_embedding(adata, file, format=["svg", "png"], **kwargs):
+    for extension in format:
+        file_name = file + "." + extension
+        scv.pl.velocity_embedding(adata, save = file_name, **kwargs)
+
+# Read the data
+adata = scv.read("results/hca_myesoph.h5ad")
+
+# Check that that the object has the information we expect
+adata
+adata.layers.keys()  # should include spliced and unspliced
+adata.layers['spliced']  # check presence
+adata.layers['unspliced']  # check presence
+
+# Filter and normalize
+scv.pp.filter_and_normalize(adata, min_shared_counts=20, n_top_genes=2000)
+
+# Calculate cell moments
+scv.pp.moments(adata, n_pcs=30, n_neighbors=30)
+
+# Estimate RNA velocity with stochastic mode
+scv.tl.velocity(adata, mode='stochastic')
+scv.tl.velocity_graph(adata, n_jobs=6)
+scv.tl.velocity_embedding(adata, basis='umap')
+
+# Plot velocity results
+save_stream(adata, file="results/velocity/scvelo_stochastic/hca_esoph_stream", format=['svg', 'png'], basis="umap", color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin')
+
+save_grid(adata, file="results/velocity/scvelo_stochastic/hca_esoph_grid", format=['svg', 'png'], basis='umap', color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin', arrow_length=5, arrow_size=3)
+
+save_embedding(adata, file="results/velocity/scvelo_stochastic/hca_esoph_velocity", format=['svg', 'png'], basis="umap", color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin', arrow_length=5, arrow_size=3, dpi=120)
+
+# Save object
+adata.write("results/velocity/hca_myesoph_stochastic.h5ad", compression='gzip')
+
+# Estimate RNA velocity with deterministic mode
+scv.tl.velocity(adata, mode='deterministic')
+scv.tl.velocity_graph(adata, n_jobs=6)
+scv.tl.velocity_embedding(adata, basis='umap')
+
+# Plot velocity results
+save_stream(adata, file="results/velocity/scvelo_deterministic/hca_esoph_stream", format=['svg', 'png'], basis="umap", color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin')
+
+save_grid(adata, file="results/velocity/scvelo_deterministic/hca_esoph_grid", format=['svg', 'png'], basis='umap', color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin', arrow_length=5, arrow_size=3)
+
+save_embedding(adata, file="results/velocity/scvelo_deterministic/hca_esoph_velocity", format=['svg', 'png'], basis="umap", color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin', arrow_length=5, arrow_size=3, dpi=120)
+
+# Save object
+adata.write("results/velocity/hca_myesoph_deterministic.h5ad", compression='gzip')
+
+# Estimate RNA velocity with dynamical mode
+scv.tl.recover_dynamics(adata, n_jobs=4)
+scv.tl.velocity(adata, mode='dynamical')
+scv.tl.velocity_graph(adata, n_jobs=6)
+scv.tl.velocity_embedding(adata, basis='umap')
+
+# Plot velocity results
+save_stream(adata, file="results/velocity/scvelo_dynamical/hca_esoph_stream", format=['svg', 'png'], basis="umap", color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin')
+
+save_grid(adata, file="results/velocity/scvelo_dynamical/hca_esoph_grid", format=['svg', 'png'], basis='umap', color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin', arrow_length=5, arrow_size=3)
+
+save_embedding(adata, file="results/velocity/scvelo_dynamical/hca_esoph_velocity", format=['svg', 'png'], basis="umap", color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin', arrow_length=5, arrow_size=3, dpi=120)
+
+# Save object
+adata.write("results/velocity/hca_myesoph_dynamical.h5ad", compression='gzip')
+```
+
+#### Velocity over epitelial subset
+
+We are only interested in the epithelial cells, so I'll subset only these cells and apply RNA velocity to them exclusively.
+
+```{python}
+# Subset anndata for epithelial cells
+epi = adata[adata.obs["Celltypes_2020_names"].isin(['Epi_basal', 'Epi_suprabasal', 'Epi_stratified', 'Epi_upper'])].copy()
+
+# Filter and normalize
+scv.pp.filter_and_normalize(epi, min_shared_counts=20, n_top_genes=2000)
+
+# Calculate cell moments
+scv.pp.moments(epi, n_pcs=30, n_neighbors=30)
+
+# Re-calculate the embedding (UMAP)
+scv.tl.umap(epi)
+
+# Estimate RNA velocity with stochastic mode
+scv.tl.velocity(epi, mode='stochastic')
+scv.tl.velocity_graph(epi, n_jobs=6)
+scv.tl.velocity_embedding(epi, basis='umap')
+
+# Plot velocity results
+save_stream(epi, file="results/velocity/scvelo_stochastic/hca_esoph_epi_stream", format=['svg', 'png'], basis="umap", color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin')
+
+save_grid(epi, file="results/velocity/scvelo_stochastic/hca_esoph_epi_grid", format=['svg', 'png'], basis='umap', color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin', arrow_length=5, arrow_size=3)
+
+save_embedding(epi, file="results/velocity/scvelo_stochastic/hca_esoph_epi_velocity", format=['svg', 'png'], basis="umap", color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin', arrow_length=5, arrow_size=3, dpi=120)
+
+# Save object
+adata.write("results/velocity/hca_myesoph_epi_stochastic.h5ad", compression='gzip')
+
+# Estimate RNA velocity with deterministic mode
+scv.tl.velocity(epi, mode='deterministic')
+scv.tl.velocity_graph(epi, n_jobs=6)
+scv.tl.velocity_embedding(epi, basis='umap')
+
+# Plot velocity results
+save_stream(epi, file="results/velocity/scvelo_deterministic/hca_esoph_epi_stream", format=['svg', 'png'], basis="umap", color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin')
+
+save_grid(epi, file="results/velocity/scvelo_deterministic/hca_esoph_epi_grid", format=['svg', 'png'], basis='umap', color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin', arrow_length=5, arrow_size=3)
+
+save_embedding(epi, file="results/velocity/scvelo_deterministic/hca_esoph_epi_velocity", format=['svg', 'png'], basis="umap", color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin', arrow_length=5, arrow_size=3, dpi=120)
+
+# Save object
+adata.write("results/velocity/hca_myesoph_epi_deterministic.h5ad", compression='gzip')
+
+# Estimate RNA velocity with dynamical mode
+scv.tl.recover_dynamics(epi, n_jobs=4)
+scv.tl.velocity(epi, mode='dynamical')
+scv.tl.velocity_graph(epi, n_jobs=6)
+scv.tl.velocity_embedding(epi, basis='umap')
+
+# Plot velocity results
+save_stream(epi, file="results/velocity/scvelo_dynamical/hca_esoph_epi_stream", format=['svg', 'png'], basis="umap", color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin')
+
+save_grid(epi, file="results/velocity/scvelo_dynamical/hca_esoph_epi_grid", format=['svg', 'png'], basis='umap', color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin', arrow_length=5, arrow_size=3)
+
+save_embedding(epi, file="results/velocity/scvelo_dynamical/hca_esoph_epi_velocity", format=['svg', 'png'], basis="umap", color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin', arrow_length=5, arrow_size=3, dpi=120)
+
+# Save object
+adata.write("results/velocity/hca_myesoph_epi_dynamical.h5ad", compression='gzip')
+```
+
+#### Analyzing velocity output
+
+```{python}
+scv.tl.velocity_confidence(adata)
+scv.pl.scatter(adata, basis='umap', color=['velocity_length', 'velocity_confidence'], color_map='coolwarm', perc=[0, 100], save="results/velocity/scvelo_stochastic/hca_myesoph_confidence.png")
+```
+
+```{python}
+scv.tl.rank_velocity_genes(adata, groupby='Celltypes_2020_names', min_corr=0.3)
+df scv.get_df(adata.uns['rank_velocity_genes']['names'])
+df.to_csv("results/velocity/scvelo_stochastic/hca_myesoph_genes_rank.csv")
+```
+
+#### Generic script for scvelo
+
+I create a generalized script to run all of the RNA velocity steps together. This script will allow me to calculate RNA velocities as well as plot embeddings with velocities, plot velocity confidence, and rank genes.
+
+```{python}
+"""
+DESCRIPTION: perform RNA velocity and save plots
+AUTHOR: Darío González
+"""
+
+# Imports
+import argparse
+import os
+import scanpy as sp
+import scvelo as scv
+
+# Parse arguments
+parser = argparse.ArgumentParser(description="Perform RNA velocity and save plots")
+
+parser.add_argument('-m', '--mode', help="Scvelo modes to use and save plots for", action='store', choices=['stochastic', 'deterministic', 'dynamical'], nargs='+', default=['stochastic', 'deterministic', 'dynamical'])
+parser.add_argument('-d', '--directory', help="Folder in to which to store the results", action='store', default=".")
+parser.add_argument('-w', '--write_name', help="Base name of the plots files to be written", action='store', required=True)
+parser.add_argument('-f', '--format', help="Formats in which to save the plots. One or more of [svg,png,pdf]", action='store', nargs='+', choices=['svg', 'png', 'pdf'], default=['svg', 'png'])
+parser.add_argument('-a', '--velocity', help="Perform velocity", action='store_true')
+parser.add_argument('-u', '--umap', help="Calculate UMAP", action='store_true')
+parser.add_argument('-c', '--confidence', help="Save confidence plots", action='store_true')
+parser.add_argument('-r', '--rank', help="Save table with velocity gene rank per cluster group", action='store_true')
+parser.add_argument('-s', '--save', help="File name to save anndata object with velocity data", action='store', default=None)
+parser.add_argument('adata', help="File with Anndata object. It should have spliced and unspliced layers.")
+
+args = parser.parse_args()
+
+print(args)
+
+# Funtions to quickly save plots
+def save_stream(adata, file, format=["svg", "png"], **kwargs):
+    for extension in format:
+        file_name = file + "." + extension
+        scv.pl.velocity_embedding_stream(adata, save = file_name, **kwargs)
+
+def save_grid(adata, file, format=["svg", "png"], **kwargs):
+    for extension in format:
+        file_name = file + "." + extension
+        scv.pl.velocity_embedding_grid(adata, save = file_name, **kwargs)  
+
+def save_embedding(adata, file, format=["svg", "png"], **kwargs):
+    for extension in format:
+        file_name = file + "." + extension
+        scv.pl.velocity_embedding(adata, save = file_name, **kwargs)
+
+# Read the data
+adata = scv.read(args.adata)
+
+if args.velocity:
+    # Filter and normalize
+    scv.pp.filter_and_normalize(adata, min_shared_counts=20, n_top_genes=2000)
+
+    # Calculate cell moments
+    scv.pp.moments(adata, n_pcs=30, n_neighbors=30)
+
+if args.umap:
+    scv.tl.umap(adata)
+
+for mode in args.mode:
+    save_folder = args.directory + "/scvelo_" + mode + "/"
+    os.makedirs(save_folder, exist_ok=True)
+
+    if args.velocity:
+        # Estimate RNA velocity with stochastic mode
+        if mode == 'dynamical':
+            scv.tl.recover_dynamics(epi, n_jobs=4)
+        
+        scv.tl.velocity(adata, mode=mode)
+        scv.tl.velocity_graph(adata, n_jobs=6)
+        scv.tl.velocity_embedding(adata, basis='umap')
+
+        # Plot velocity results
+        save_stream(adata, file=(save_folder + args.write_name + "_stream"), format=args.format, basis="umap", color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin')
+
+        save_grid(adata, file=(save_folder + args.write_name + "_grid"), format=args.format, basis='umap', color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin', arrow_length=5, arrow_size=3)
+
+        save_embedding(adata, file=(save_folder + args.write_name + "_velocity"), format=args.format, basis="umap", color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin', arrow_length=5, arrow_size=3, dpi=120)
+
+    # Calculate confidence
+    if args.confidence:
+        scv.tl.velocity_confidence(adata)
+        scv.pl.scatter(adata, basis='umap', color=['velocity_length', 'velocity_confidence'], color_map='coolwarm', perc=[0, 100], save=(save_folder + args.write_name + "_confidence.svg"))
+        scv.pl.scatter(adata, basis='umap', color=['velocity_length', 'velocity_confidence'], color_map='coolwarm', perc=[0, 100], save=(save_folder + args.write_name + "_confidence.png"))
+
+    # Rank genes
+    if args.rank:
+        scv.tl.rank_velocity_genes(adata, groupby='Celltypes_2020_names', min_corr=0.3)
+        df = scv.get_df(adata.uns['rank_velocity_genes']['names'])
+        df.to_csv(save_folder + args.write_name + "genes_rank.csv", index=False)
+
+    # Save object
+    if args.save is not None:
+        save_name = args.save + "_" + mode + '.h5ad'
+        adata.write(save_name, compression='gzip')
+```
+
+Run RNA velocity for the HCA data.
+
+```{bash}
+# [folia]
+
+wd=/home/dario/TFM/2019.12.31_Meyer/singlecell
+results=${wd}/results/extending_paper_analysis
+
+python exec_scvelo.py \
+    -m dynamical \
+    --velocity \
+    --confidence \
+    --rank \
+    -d ${results}/velocity \
+    -w hca_myesoph \
+    -s ${results}/velocity/hca_myesoph \
+    ${results}/objects/hca_myesoph.h5ad |& tee ${wd}/logs/scvelo_dynamical_$(date '+%Y%m%d_%H%M%S').log
+```
+
+Save a subset of the file with only epithelium cells.
+
+```{python}
+# [folia]
+
+import scanpy as sc
+import scvelo as scv
+import os
+
+os.chdir("/home/dario/TFM/2019.12.31_Meyer")
+
+adata = scv.read("results/hca_myesoph.h5ad")
+epi = adata[adata.obs["Celltypes_2020_names"].isin(['Epi_basal', 'Epi_suprabasal', 'Epi_stratified', 'Epi_upper'])].copy()
+epi.write("results/hca_myesoph_epi.h5ad", compression='gzip')
+```
+
+Run RNA velocity for the epithelial cells subset regenerating the UMAP.
+
+```{bash}
+# [folia]
+
+conda activate d_scanpy
+
+wd=/home/dario/TFM/2019.12.31_Meyer/singlecell/results/extending_paper_analysis
+
+python exec_scvelo.py \
+    -m stochastic deterministic dynamical \
+    -aucr \
+    -d ${wd}/velocity \
+    -w hca_myesoph_epi \
+    -s ${wd}/velocity/hca_myesoph_epi \
+    ${wd}/objects/hca_myesoph_epi.h5ad |& tee ${wd}/logs/scvelo_epi_$(date '+%Y%m%d_%H%M%S').log
+```
+
+Run RNA velocity for the epithelial cells subset with the old UMAP.
+
+```{bash}
+# [folia]
+
+conda activate d_scanpy
+
+wd=/home/dario/TFM/2019.12.31_Meyer/singlecell/results/extending_paper_analysis
+
+python exec_scvelo.py \
+    -m stochastic deterministic dynamical \
+    -acr \
+    -d ${wd}/velocity \
+    -w hca_myesoph_epi \
+    -s ${wd}/velocity/hca_myesoph_epi \
+    ${wd}/objects/hca_myesoph_epi.h5ad |& tee ${wd/%results*/}/logs/scvelo_epi_$(date '+%Y%m%d_%H%M%S').log
+```
+
+#### Further analyses
+
+I'm going to analyze further the results for RNA velocity from scvelo. 
+
+```{python}
+# [folia]
+
+import scanpy as sp
+import scvelo as scv
+
+results = "/home/dario/TFM/2019.12.31_Meyer/singlecell/results/extending_paper_analysis/velocity"
+
+# Read data in
+adata = scv.read(f"{results}/hca_myesoph_dynamical.h5ad")
+
+# Velocity length and confidence per cluster
+keys = ['velocity_length', 'velocity_confidence']
+df = adata.obs.groupby('Celltypes_2020_names')[keys].mean().T
+df.to_csv(f"{results}/hca_myesoph_dynamical_confidence_per_cluster.csv")
+
+# Cycling progenitors [NON FUNCTIONAL]
+scv.tl.score_genes_cell_cycle(adata)
+scv.pl.scatter(adata, color_gradients=['S_score', 'G2M_score'], smooth=True, perc=[0, 100], size=20, save=f"{results}/hca_myesoph_dynamical_cycling_progenitors.svg")
+scv.pl.scatter(adata, color_gradients=['S_score', 'G2M_score'], smooth=True, perc=[0, 100], figsize=(10, 8), save=f"{results}/hca_myesoph_dynamical_cycling_progenitors.png")
+
+```
+
+Re-generate some of the plots because they have bad quality. I import the saved h5ad with velocity information to re-generate the plots with higher quality for the pngs. Sadly, scvelo plots incorrectly the SVGs, the colorbar is displaced over the plotting area. I could try to troubleshoot the SVG generation, but that will take a long time. So, I can only generate PNGs if I want to get results quickly. 
+
+```{python}
+import scanpy as sp
+import scvelo as scv
+import matplotlib.pyplot as plt
+
+wd = "/home/dario/TFM/2019.12.31_Meyer/singlecell/results/extending_paper_analysis/velocity"
+results = [f"{wd}/scvelo_dynamical", f"{wd}/scvelo_stochastic", f"{wd}/scvelo_deterministic"]
+
+for i in results:
+    # Get model name
+    mode = i.split('_')[-1]
+
+    # Read the data for the model
+    adata = scv.read(f"{i}/hca_esoph_epi_{mode}.h5ad")
+
+    # Replot confidence and length PNGs with high resolution
+    scv.pl.scatter(adata, basis='umap', color='velocity_confidence', color_map='coolwarm', perc=[0, 100], size=6, alpha=1, sort_order=False, title=f"Velocity conficence {mode} model", dpi=300, save=f"{i}/hca_esoph_epi_{mode}_confidence.png")
+    scv.pl.scatter(adata, basis='umap', color='velocity_length', color_map='coolwarm', perc=[0, 100], size=6, alpha=1, sort_order=False, dpi=300, title=f"Velocity length {mode} model", save=f"{i}/hca_esoph_epi_{mode}_length.png")
+    
+    # Replot stream PNG with high resolution
+    scv.pl.velocity_embedding_stream(adata, basis="umap", color="Celltypes_2020_names", palette='tab20', figsize=(9, 7), legend_loc='right margin', title=f"RNA velocity stream, {mode} model", dpi=300, save=(f"{i}/hca_esoph_epi_{mode}_stream.png"))
+
+    # Cycling progenitors
+    scv.tl.score_genes_cell_cycle(adata)
+    # Plot cycling progenitors
+    scv.pl.scatter(adata, color_gradients=['S_score', 'G2M_score'], edgecolor='gainsboro', linewidths=0.1, colorbar=True, smooth=False, perc=[0, 100], size=6, alpha=1, save=f"{i}/hca_esoph_epi_{mode}_cycling_progenitors.svg")
+    scv.pl.scatter(adata, color_gradients=['S_score', 'G2M_score'], edgecolor='gainsboro', linewidths=0.1, colorbar=True, smooth=False, perc=[0, 100], size=6, alpha=1, dpi=300, save=f"{i}/hca_esoph_epi_{mode}_cycling_progenitors.png")
+    
+    scv.pl.scatter(adata, basis='umap', color='phase', palette=['silver', 'coral', 'royalblue'], size=6, alpha=0.4, dpi=300, title=f"Cell phase, {mode} model", save=f"{i}/hca_esoph_epi_{mode}_phase.svg")
+    scv.pl.scatter(adata, basis='umap', color='phase', palette=['silver', 'coral', 'royalblue'], size=6, alpha=0.4, dpi=300, title=f"Cell phase, {mode} model", save=f"{i}/hca_esoph_epi_{mode}_phase.png")
+
+    # Save the object
+    adata.write(f"{i}/hca_esoph_epi_{mode}.h5ad")
+
+for i in results:
+    # Get model name
+    mode = i.split('_')[-1]
+
+    # Read the data for the model
+    adata = scv.read(f"{i}/hca_esoph_epi_{mode}.h5ad")
+
+    # Get ranked genes
+    df = scv.get_df(adata.uns['rank_velocity_genes']['names'])
+    
+    # Plot 5 most influential genes per cluster
+    kwargs = dict(frameon=False, size=10, linewidth=0.5, )
+
+    #fig, axs = plt.subplots(len(df.columns))
+
+    for j, ct in enumerate(df.columns):
+        #plt.subplot(len(df.columns), 1, j+1)
+        #scv.pl.scatter(adata, df[ct][:5], ylabel=str(ct), **kwargs)
+        #scv.pl.scatter(adata, df[ct][:5], ylabel=str(ct), **kwargs, save=f"{i}/hca_esoph_epi_{mode}_important_genes_{ct}.svg")
+        scv.pl.scatter(adata, df[ct][:5], ylabel=str(ct), **kwargs, save=f"{i}/hca_esoph_epi_{mode}_important_genes_{ct}.png", dpi=300)
+
+    #plt.savefig(f"{i}/hca_esoph_epi_{mode}_important_genes.png", dpi=300)
+    #fig.savefig(f"{i}/hca_esoph_epi_{mode}_important_genes.svg")
+    #fig.savefig(f"{i}/hca_esoph_epi_{mode}_important_genes.png")
+```
+
+## Trajectory inference with Slingshot
+
+::: {.callout-important}
+This analysis is entirely of data from the original paper, even if I'm using the combined Seurat object. So, it's as if I was doing the trajectory inference analysis directly to the original paper object. 
+:::
+
+::: {.callout-note}
+## Slingshot information
+
+| **Link**: <https://bioconductor.org/packages/release/bioc/html/slingshot.html>
+| **Citation**: <https://bmcgenomics.biomedcentral.com/articles/10.1186/s12864-018-4772-0>
+| **Development**: <https://github.com/kstreet13/slingshot>
+:::
+
+:::  {.callout-note}
+## About SingleCellExperiment
+
+Slingshot uses SingleCellExperiment objects. To understand the 'SingleCellExperiment' class organization, it is somewhat documented [here](https://bioconductor.org/packages/release/bioc/vignettes/SingleCellExperiment/inst/doc/intro.html) and [here](https://bioconductor.org/packages/release/bioc/manuals/SingleCellExperiment/man/SingleCellExperiment.pdf), and you also need to look the class 'RangedSummarizedExperiment', that it extends, which is explained [here](https://bioconductor.org/packages/3.18/bioc/vignettes/SummarizedExperiment/inst/doc/SummarizedExperiment.html)
+:::
+
+I'm following the instructions in the trajectory inference [Slingshot tutorial](https://bioconductor.org/packages/release/bioc/vignettes/slingshot/inst/doc/vignette.html).
+
+As stated in the [this](https://www.nature.com/articles/s41587-019-0071-9) article comparing single cell trajectory inference methods, Slingshot should be used when there aren't going to be disconnected trajectories. Therefore, it is a good thing that I'm only analyzing a subset of epithelial cells.
+
+To run trajectory inference with Slingshot you can use the wrapper function `slingshot()` (which is recommended), or the functions `getLineages()` and `getCurves()`. These functions take a matrix or a "SingleCellExperiment" object as input. Hence, I'll convert my Seurat object to SingleCellExperiment. There is a [Seurat tutorial for conversion](https://satijalab.org/seurat/archive/v4.3/conversion_vignette). 
+
+I load my comparison object in R and transform it to SingleCellExperiment.
+
+```{r}
+# [folia]
+
+# Imports
+library(Seurat)
+
+# Load comparison Seurat object
+hca_myesoph <- readRDS("/home/dario/TFM/2019.12.31_Meyer/results/comparison_hca_myresults/hca_myesoph.rds")
+
+# Subsetting the object only to epithelial cells
+Idents(hca_myesoph) <- hca_myesoph@meta.data$Celltypes_updated_July_2020
+hca_myesoph_epi <- subset(hca_myesoph, idents = c("Epi_basal", "Epi_suprabasal", "Epi_stratified", "Epi_upper"))
+
+# Convert SeuratObject to SingleCellExperiment with Seurat function 'as.SingleCellExperiment()'
+hca_my_epi_sce <- as.SingleCellExperiment(hca_myesoph_epi)
+```
+
+```{r}
+library(slingshot)
+
+# Run trajectory inference with slingshot
+hca_my_epi_sce <- slingshot(hca_my_epi_sce, clusterLabels = 'Celltypes_updated_July_2020', reducedDim = 'UMAP')
+
+###############
+# Plot results
+###############
+library(grDevices)
+library(RColorBrewer)
+
+# Plot trajectory (curves how they are called by Slingshot)
+colors <- colorRampPalette(brewer.pal(11,'Spectral')[-6])(100)
+plotcol <- colors[cut(hca_my_epi_sce$slingPseudotime_1, breaks=100)]
+
+png("results/comparison_hca_myresults/velocity/slingshot_trajectory.png", width=1000, height=1000, units="px")
+#layout(mat = matrix(1:2, ncol=2), width = c(4, 1), height = c(1, 1))
+plot(reducedDims(hca_my_epi_sce)$UMAP, col = plotcol, pch=16, asp = 1)
+lines(SlingshotDataSet(hca_my_epi_sce), lwd=2, col='black')
+#legend_image <- as.raster(colors, ncol=1)
+#plot(x = c(0, 2), y = c(0, 1), type = 'n', axes = FALSE, xlab = '', ylab = '', main = 'Legend')
+#rasterImage(legend_image, 0, 0, 1, 1)
+dev.off()
+
+# Plot lineage structure
+png("results/comparison_hca_myresults/velocity/slingshot_lineage.png", width=1000, height=1000, units="px")
+plot(reducedDims(hca_my_epi_sce)$UMAP, col = brewer.pal(9,'Set1')[as.numeric(droplevels(hca_my_epi_sce$Celltypes_updated_July_2020))], pch=16, asp = 1)
+lines(SlingshotDataSet(hca_my_epi_sce), lwd=2, type = 'lineages', col = 'black')
+legend(x="topright", legend=c("Epi_basal", "Epi_stratified", "Epi_suprabasal", "Epi_upper"), col=brewer.pal(9,'Set1')[1:4], pch=16, cex=2)
+dev.off()
+```
+
+The starting and ending clusters can be found in the 'SlingshotDataSet' object, inside the slot `slingParams` as `star.clus` and `end.clus`.

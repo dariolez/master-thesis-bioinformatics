@@ -1,0 +1,263 @@
+---
+execute:
+  eval: false
+---
+
+# Joining velocity count matrices in a Seurat Object {#sec-join-count-matrices}
+
+Imports
+
+```{r}
+library(BUSpaRse) # github (devtools)
+library(Seurat)
+library(SeuratWrappers) # github (devtools)
+library(zeallot) # For %<-% that unpacks lists in the Python manner
+library(DropletUtils)
+library(plyr)
+library(tidyverse)
+library(Matrix)
+library(GGally)
+library(scales)
+library(plotly)
+```
+
+## Merge test
+
+First I check what Seurat does when merging two different objects without previous preparation.
+
+```{r}
+find_dup_genes <- function(x, mode = "count") {
+    
+    dup_genes_rows <- which(duplicated(rownames(x)) | duplicated(rownames(x), fromLast = TRUE))
+    dup_genes <- rownames(x)[dup_genes_rows]
+    
+    if (mode == "count") {
+        dup_genes <- as.data.frame(table(dup_genes))
+    } else if (mode == "unique") {
+        dup_genes <- unique(dup_genes)
+    } else if (mode == "all") {
+        return(dup_genes)
+    } else {
+        stop("Unrecognised mode. Only 'count', 'unique' and 'all' are valid.\n")
+    }
+    
+    return(dup_genes)
+}
+```
+
+```{r}
+# Get directories
+directories <- dir(path = "~/TFM/2019.12.31_Meyer/data",
+                   pattern = "raw",
+                   full.names = TRUE,
+                   recursive = TRUE,
+                   include.dirs = TRUE)
+
+# Merge test for the 2 first samples
+c(spliced, unspliced) %<-% read_velocity_output(spliced_dir = directories[1],
+                                    spliced_name = "spliced",
+                                    unspliced_dir = directories[1],
+                                    unspliced_name = "unspliced")
+
+bcs_use <- intersect(colnames(spliced), colnames(unspliced))
+
+sf <- spliced[, bcs_use]
+uf <- unspliced[, bcs_use]
+print(find_dup_genes(sf))
+print(find_dup_genes(uf))
+
+seu1 <- CreateSeuratObject(sf, assay = "spliced")
+seu1[["unspliced"]] <- CreateAssayObject(uf)
+
+seu1
+
+c(spliced, unspliced) %<-% read_velocity_output(spliced_dir = directories[2],
+                                    spliced_name = "spliced",
+                                    unspliced_dir = directories[2],
+                                    unspliced_name = "unspliced")
+
+bcs_use <- intersect(colnames(spliced), colnames(unspliced))
+
+sf <- spliced[, bcs_use]
+uf <- unspliced[, bcs_use]
+print(find_dup_genes(sf))
+print(find_dup_genes(uf))
+
+seu2 <- CreateSeuratObject(sf, assay = "spliced")
+seu2[["unspliced"]] <- CreateAssayObject(uf)
+
+seu2
+
+# Merge objects
+seu1y2 <- merge(seu1, seu2)
+```
+
+When Seurat merges the 2 objects, it checks if barcodes collide, and it makes the barcodes unique appending numbers 1 and 2 depending on the object that they come from.
+
+Adding meta.feature information. The paper Seurat object holds Ensembl gene ID information in the RNA assay. So, if I want to match both objects features/genes to compare them I'll have to add Ensembl IDs to my merged object.
+
+```{r}
+# Load Ensembl ID to symbol table
+spliced_ensembl2symbol <- read.table(paste0(directories[1], "/spliced.genes.map.txt"), header = FALSE, sep = "\t", col.names = c("ensembl_id", "symbol"))
+
+# Adding feature metadata to seu1 and seu2
+seu1@assays$spliced <- AddMetaData(seu1@assays$spliced, metadata = spliced_ensembl2symbol$ensembl_id, col.name = "ensembl_id")
+seu2@assays$spliced <- AddMetaData(seu2@assays$spliced, metadata = spliced_ensembl2symbol$ensembl_id, col.name = "ensembl_id")
+
+# Renaming barcodes to avoid collisions during merge
+seu1 <- RenameCells(seu1, new.names = paste0(rownames(seu1), "-1"))
+seu2 <- RenameCells(seu2, new.names = paste0(colnames(seu2), "-2"))
+
+# Merge objects
+seu1y2 <- merge(seu1, seu2)
+
+# Check 
+head(seu1y2@assays$spliced@meta.features)
+```
+
+The `merge()` function from Seurat doesn't keep the `meta.feature` information in the merge object. So I'll have to add it directly to the final merged object.
+
+### Merging all samples/runs {#sec-merging-all-samples}
+
+I create a file with the runs/samples folder names and the file names for 10x samples. This will allow me to get the file that is being processed with their folder name and then append their corresponding file name.
+
+```bash
+cd /mnt/bazar/dario_TFM/2019.12.31_Meyer/Metadata/Metadata_combined
+
+# Steps:
+# 1) extract the columns (csvtk cut)
+# 2) keep the rows for 10x experiments (csvtk filter)
+# 3) remove the trailing characters after first underscore (sed)
+# 4) remove duplicate rows (uniq)
+csvtk cut -f bundle_uuid,file_name,library_preparation_protocol.library_construction_approach Metadata_esophagus_empty_dedup.csv | \
+csvtk filter2 --out-tabs -f '$3 =~ "10x"' | \
+sed 's/_.*gz//g' | \
+uniq > /mnt/bazar/dario_TFM/2019.12.31_Meyer/data+analysis/esophagus/singlecell/bundle_filename_10x.tsv
+
+# Same as previous command but with awk instead of sed
+#csvtk cut -f bundle_uuid,file_name,library_preparation_protocol.library_construction_approach Metadata_esophagus_empty_dedup.csv | \
+#csvtk filter2 --out-tabs -f '$3 =~ "10x"' | \
+#awk 'BEGIN{FS = "\t"; OFS = "\t"} {gsub(/_.*$/, "", $2); print $0}' | \
+#uniq > /mnt/bazar/dario_TFM/2019.12.31_Meyer/data+analysis/esophagus/singlecell/bundle_filename_10x.tsv
+```
+
+I write a script to merge count matrices.
+
+```{r}
+# AUTHOR: Darío González
+# DESCRIPTION: Merging all samples into one Seurat object
+
+# IMPORTS
+library(BUSpaRse) # github (devtools)
+library(Seurat)
+library(SeuratWrappers) # github (devtools)
+library(zeallot) # For %<-% that unpacks lists in the Python manner
+library(DropletUtils)
+library(plyr)
+library(tidyverse)
+library(Matrix)
+
+# MAIN
+
+# Get directories
+directories <- dir(path = "~/TFM/2019.12.31_Meyer/data",
+                   pattern = "raw",
+                   full.names = TRUE,
+                   recursive = TRUE,
+                   include.dirs = TRUE)
+
+# Load run uuid to file name
+bundle2filename <- read.table("~/TFM/2019.12.31_Meyer/bundle_filename_10x.tsv", header = TRUE, sep = "\t", quote = "")
+
+# Read in the matrices
+read_velocity <- function(dir=getwd(),
+                          spliced_file="spliced.mtx",
+                          unspliced_file="unspliced.mtx",
+                          barcodes="barcodes.txt",
+                          genes="genes.txt",
+                          ...) {
+    spliced <- ReadMtx(mtx = paste0(dir, "/", spliced_file),
+                       cells = paste0(dir, "/", barcodes),
+                       features = paste0(dir, "/", genes),
+                       ...)
+    unspliced <- ReadMtx(mtx = paste0(dir, "/", unspliced_file),
+                         cells = paste0(dir, "/", barcodes),
+                         features = paste0(dir, "/", genes),
+                         ...)
+    return(list(spliced, unspliced))
+}
+
+# Make Seurat object from all individual spliced/unspliced files:
+counter <- 0
+
+for (run_dir in directories) {
+    # Update counter
+    counter <- counter + 1
+    
+    # State the file being processed
+    cat("\n", counter, "Processing", run_dir, "\n")
+    
+    # Load the count matrices for spliced and unspliced reads
+    c(spliced, unspliced) %<-%  read_velocity(dir = run_dir,
+                                              spliced_file = "spliced.mtx",
+                                              unspliced_file = "unspliced.mtx",
+                                              barcodes = "barcodes.tsv",
+                                              genes = "features.tsv",
+                                              cell.column = 1,
+                                              feature.column = 2,
+                                              mtx.transpose = FALSE)
+
+    # Filter matrices so that barcodes that appear in both remain
+    # sf = spliced filtered, uf = unspliced filtered
+    bcs_use <- intersect(colnames(spliced), colnames(unspliced))
+    sf <- spliced[, bcs_use]
+    uf <- unspliced[, bcs_use]
+    
+    # Create Seurat Object
+    seu <- CreateSeuratObject(sf, assay = "spliced")
+    seu[["unspliced"]] <- CreateAssayObject(uf)
+    
+    # Rename cells to avoid barcode collision when merging
+    bundle_row <- grep(str_extract(run_dir, "([0-9a-z]+-){4}[0-9a-z]+"), bundle2filename$bundle_uuid)
+    newbarcodes <- paste0(colnames(seu), "-1-", rep(bundle2filename[bundle_row, "file_name"], length(colnames(seu))))
+    seu <- RenameCells(seu, new.names = newbarcodes)
+    
+    # Merge Seurat objects
+    if (counter == 1) {
+        myesoph <- seu
+    } else {
+        myesoph <- merge(myesoph, seu)
+    }
+    
+    rm(seu)
+}
+
+myesoph
+
+# Add feature metadata
+# Load an Ensembl gene ID to HGNC symbol `.genes.map.txt` file. 
+# All files for spliced and unspliced samples are identical so it doesn't matter which one we load
+ensembl2symbol <- read.table(paste0(directories[1], "/", "features.tsv"), header = FALSE, sep = "\t")
+
+# Rows are left ordered after merges (I checked), so we can add Ensembl IDs directly without more checks
+#myesoph@assays$spliced <- AddMetaData(myesoph@assays$spliced, metadata = ensembl2symbol[[1]], col.name = "ensembl_id")
+#myesoph@assays$unspliced <- AddMetaData(myesoph@assays$unspliced, metadata = ensembl2symbol[[1]], col.name = "ensembl_id")
+
+# If we want to check before assigning Ensembl IDs to symbols
+mysymbols_match <- match(rownames(myesoph), make.unique(ensembl2symbol[[2]]))
+myesoph@assays$spliced <- AddMetaData(myesoph@assays$spliced, metadata = ensembl2symbol[[1]][mysymbols_match], col.name = "ensembl_id")
+myesoph@assays$unspliced <- AddMetaData(myesoph@assays$unspliced, metadata = ensembl2symbol[[1]][mysymbols_match], col.name = "ensembl_id")
+
+# Save merged Seurat Object
+saveRDS(myesoph, file = "~/TFM/2019.12.31_Meyer/results/myesoph_star.rds")
+```
+
+Run the script
+
+```bash
+# [folia]
+
+Rscript seurat-analysis_merge.R
+```
+
+The R script ended without errors and generated an RDS file.

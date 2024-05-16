@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.4.549">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Master thesis - 9&nbsp; Trajectory inference</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<link href="./combining_seurat_objects.html" rel="prev">
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+</head>
+
+<body class="nav-sidebar floating">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./alignment_starsolo.html">Trajectory inference analysis</a></li><li class="breadcrumb-item"><a href="./trajectory_inference.html"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Trajectory inference</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Master thesis</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/dariolez/master-thesis-bioinformatics" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./installations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Installations</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./data_download.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Data download</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./metadata_inspection.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Metadata inspection</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./quality_control.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Quality control</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./inspection_authors_seurat.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Inspect original paper analysis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true">
+ <span class="menu-text">Trajectory inference analysis</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./alignment_starsolo.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Aligning scRNA-seq with STARsolo</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./joining_count_matrices.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Joining velocity count matrices in a Seurat Object</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./combining_seurat_objects.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Combining my Seurat and authors Seurat</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./trajectory_inference.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Trajectory inference</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active" data-toc-expanded="2">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#rna-velocity" id="toc-rna-velocity" class="nav-link active" data-scroll-target="#rna-velocity"><span class="header-section-number">9.1</span> RNA velocity</a>
+  <ul>
+  <li><a href="#prepare-input-for-scvelo" id="toc-prepare-input-for-scvelo" class="nav-link" data-scroll-target="#prepare-input-for-scvelo"><span class="header-section-number">9.1.1</span> Prepare input for scvelo</a></li>
+  <li><a href="#using-scvelo" id="toc-using-scvelo" class="nav-link" data-scroll-target="#using-scvelo"><span class="header-section-number">9.1.2</span> Using scvelo</a>
+  <ul>
+  <li><a href="#velocity-over-epitelial-subset" id="toc-velocity-over-epitelial-subset" class="nav-link" data-scroll-target="#velocity-over-epitelial-subset"><span class="header-section-number">9.1.2.1</span> Velocity over epitelial subset</a></li>
+  <li><a href="#analyzing-velocity-output" id="toc-analyzing-velocity-output" class="nav-link" data-scroll-target="#analyzing-velocity-output"><span class="header-section-number">9.1.2.2</span> Analyzing velocity output</a></li>
+  <li><a href="#generic-script-for-scvelo" id="toc-generic-script-for-scvelo" class="nav-link" data-scroll-target="#generic-script-for-scvelo"><span class="header-section-number">9.1.2.3</span> Generic script for scvelo</a></li>
+  <li><a href="#further-analyses" id="toc-further-analyses" class="nav-link" data-scroll-target="#further-analyses"><span class="header-section-number">9.1.2.4</span> Further analyses</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#trajectory-inference-with-slingshot" id="toc-trajectory-inference-with-slingshot" class="nav-link" data-scroll-target="#trajectory-inference-with-slingshot"><span class="header-section-number">9.2</span> Trajectory inference with Slingshot</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./alignment_starsolo.html">Trajectory inference analysis</a></li><li class="breadcrumb-item"><a href="./trajectory_inference.html"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Trajectory inference</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span id="sec-trajectory-inference" class="quarto-section-identifier"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Trajectory inference</span></span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="rna-velocity" class="level2" data-number="9.1">
+<h2 data-number="9.1" class="anchored" data-anchor-id="rna-velocity"><span class="header-section-number">9.1</span> RNA velocity</h2>
+<section id="prepare-input-for-scvelo" class="level3" data-number="9.1.1">
+<h3 data-number="9.1.1" class="anchored" data-anchor-id="prepare-input-for-scvelo"><span class="header-section-number">9.1.1</span> Prepare input for scvelo</h3>
+<p>We are going to use the package <code>scvelo</code> to perform RNA velocity of the data. This is a python package that forms part of the <a href="https://scverse.org/">scverse ecosystem</a> for scRNA analysis. In the scverse, 3 types of data structures are used: anndata, mudata and spatialdata. Scvelo uses the anndata, which is used for normal scRNA-seq.</p>
+<p>There are 2 tutorials that explain the anndata format: <a href="https://scverse-tutorials.readthedocs.io/en/latest/notebooks/anndata_getting_started.html">this one</a> from the scverse wiki and <a href="https://anndata.readthedocs.io/en/latest/tutorials/notebooks/getting-started.html">this one</a> from the anndata wiki.</p>
+<p>In order to use scvelo, we need to input an anndata object, so we have to transform our combined Seurat Object to h5ad. I’m going to use the package <code>SeuratDisk</code> for this purpose.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>I have to modify the Seurat Object so that SeuratDisk saves it correctly. Because by default <code>Convert()</code> saves values that we are not interested in. This behaviour is explained in its help page.</p>
+<blockquote class="blockquote">
+<p>• ‘X’ will be filled with ‘scale.data’ if ‘scale.data’ is present; otherwise, it will be filled with ‘data’ • ‘raw.X’ will be filled with ‘data’ if ‘X’ is filled with ‘scale.data’; otherwise, it will be filled with ‘counts’. If ‘counts’ is not present, then ‘raw’ will not be filled</p>
+</blockquote>
+<p>Modifications:</p>
+<ol type="A">
+<li>Remove <code>scale.data</code> in all assays: <code>seuratobject@assays$name@scale.data &lt;- matrix(nrow = 0, ncol = 0)</code>. (Because it includes less genes than the raw counts)</li>
+<li>Change the counts <code>dgCMatrix</code> so that the values are ‘integer’ instead of ‘numeric’ class. (Numeric can store decimal numbers, so the anndata object actually stores floating points instead of integers, and they are slightly different to the integers)</li>
+<li>Overwrite <code>data</code> with the raw <code>counts</code>: <code>seuratobject@assays$name@data &lt;- seuratobject@assays$name@counts</code>. (Normalization will be performed with scvelo)</li>
+</ol>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="do">### CONVERSION INTO h5ad OBJECT (export to scvelo):</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load library</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># facilitates conversion between h5Seurat and AnnData objects, i.e. interoperability between Seurat and Scanpy</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(SeuratDisk)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Update Seurat Object (the paper object is too old for SeuratDisk to convert)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># This makes sure the object has all the slots it should and correct errors in the structure</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>hca_esoph <span class="ot">&lt;-</span> <span class="fu">UpdateSeuratObject</span>(hca_esoph)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Make sure the papers assay is the default (it should already be)</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">DefaultAssay</span>(hca_esoph) <span class="ot">&lt;-</span> <span class="st">"RNA"</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># CHANGE THE SEURAT OBJECT FOR CORRECT CONVERSION</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">#  Remove scale.data and data from the assays</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>remove_scaledata <span class="ot">&lt;-</span> <span class="cf">function</span>(assay) {</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    assay<span class="sc">@</span>scale.data <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="at">nrow =</span> <span class="dv">0</span>, <span class="at">ncol =</span> <span class="dv">0</span>)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(assay)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>counts_to_integer <span class="ot">&lt;-</span> <span class="cf">function</span>(assay) {</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    assay<span class="sc">@</span>counts<span class="sc">@</span>x <span class="ot">&lt;-</span> <span class="fu">as.integer</span>(assay<span class="sc">@</span>counts<span class="sc">@</span>x)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(assay)</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>remove_normalization <span class="ot">&lt;-</span> <span class="cf">function</span>(assay) {</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    assay<span class="sc">@</span>data <span class="ot">&lt;-</span> assay<span class="sc">@</span>counts</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(assay)</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>hca_esoph<span class="sc">@</span>assays <span class="ot">&lt;-</span> <span class="fu">lapply</span>(hca_esoph<span class="sc">@</span>assays, remove_scaledata)</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>hca_esoph<span class="sc">@</span>assays <span class="ot">&lt;-</span> <span class="fu">lapply</span>(hca_esoph<span class="sc">@</span>assays, counts_to_integer)</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>hca_esoph<span class="sc">@</span>assays <span class="ot">&lt;-</span> <span class="fu">lapply</span>(hca_esoph<span class="sc">@</span>assays, remove_normalization)</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a new metadata column so that cell types are stored as strings, and not as numbers in the anndata</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>hca_esoph<span class="sc">@</span>meta.data<span class="sc">$</span>Celltypes_2020_names <span class="ot">&lt;-</span> <span class="fu">as.character</span>(hca_esoph<span class="sc">@</span>meta.data<span class="sc">$</span>Celltypes_updated_July_2020)</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert Seurat to H5AD</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a><span class="fu">SaveH5Seurat</span>(hca_esoph, <span class="at">filename =</span> <span class="st">"results/hca_myesoph.h5Seurat"</span>, <span class="at">overwrite =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="fu">Convert</span>(<span class="st">"results/hca_myesoph.h5Seurat"</span>, <span class="at">dest =</span> <span class="st">"h5ad"</span>, <span class="at">overwrite =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="using-scvelo" class="level3" data-number="9.1.2">
+<h3 data-number="9.1.2" class="anchored" data-anchor-id="using-scvelo"><span class="header-section-number">9.1.2</span> Using scvelo</h3>
+<p>Scvelo has 3 approaches to calculate RNA velocity, these are explained in detail <a href="https://scvelo.readthedocs.io/en/stable/about.html#rna-velocity-models">here</a>:</p>
+<ul>
+<li><strong>steady-state/deterministic</strong>: the original implementation in La Manno et al paper (2018)</li>
+<li><strong>stochastic</strong>: a more modern approach by Bergen et al (2020)</li>
+<li><strong>dynamical</strong>: the approach proposed by scvelo developers in Bergen et al (2020)</li>
+</ul>
+<p>I’m going to use all of the approaches.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanpy <span class="im">as</span> sp</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scvelo <span class="im">as</span> scv</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Funtions to quickly save plots</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> save_stream(adata, <span class="bu">file</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">"svg"</span>, <span class="st">"png"</span>], <span class="op">**</span>kwargs):</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> extension <span class="kw">in</span> <span class="bu">format</span>:</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        file_name <span class="op">=</span> <span class="bu">file</span> <span class="op">+</span> <span class="st">"."</span> <span class="op">+</span> extension</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        scv.pl.velocity_embedding_stream(adata, save <span class="op">=</span> file_name, <span class="op">**</span>kwargs)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> save_grid(adata, <span class="bu">file</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">"svg"</span>, <span class="st">"png"</span>], <span class="op">**</span>kwargs):</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> extension <span class="kw">in</span> <span class="bu">format</span>:</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        file_name <span class="op">=</span> <span class="bu">file</span> <span class="op">+</span> <span class="st">"."</span> <span class="op">+</span> extension</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        scv.pl.velocity_embedding_grid(adata, save <span class="op">=</span> file_name, <span class="op">**</span>kwargs)  </span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> save_embedding(adata, <span class="bu">file</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">"svg"</span>, <span class="st">"png"</span>], <span class="op">**</span>kwargs):</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> extension <span class="kw">in</span> <span class="bu">format</span>:</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        file_name <span class="op">=</span> <span class="bu">file</span> <span class="op">+</span> <span class="st">"."</span> <span class="op">+</span> extension</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        scv.pl.velocity_embedding(adata, save <span class="op">=</span> file_name, <span class="op">**</span>kwargs)</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the data</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> scv.read(<span class="st">"results/hca_myesoph.h5ad"</span>)</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Check that that the object has the information we expect</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>adata</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>adata.layers.keys()  <span class="co"># should include spliced and unspliced</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>adata.layers[<span class="st">'spliced'</span>]  <span class="co"># check presence</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>adata.layers[<span class="st">'unspliced'</span>]  <span class="co"># check presence</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter and normalize</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>scv.pp.filter_and_normalize(adata, min_shared_counts<span class="op">=</span><span class="dv">20</span>, n_top_genes<span class="op">=</span><span class="dv">2000</span>)</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate cell moments</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>scv.pp.moments(adata, n_pcs<span class="op">=</span><span class="dv">30</span>, n_neighbors<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="co"># Estimate RNA velocity with stochastic mode</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity(adata, mode<span class="op">=</span><span class="st">'stochastic'</span>)</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity_graph(adata, n_jobs<span class="op">=</span><span class="dv">6</span>)</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity_embedding(adata, basis<span class="op">=</span><span class="st">'umap'</span>)</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot velocity results</span></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>save_stream(adata, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_stochastic/hca_esoph_stream"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">"umap"</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>)</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>save_grid(adata, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_stochastic/hca_esoph_grid"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">'umap'</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>, arrow_length<span class="op">=</span><span class="dv">5</span>, arrow_size<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>save_embedding(adata, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_stochastic/hca_esoph_velocity"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">"umap"</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>, arrow_length<span class="op">=</span><span class="dv">5</span>, arrow_size<span class="op">=</span><span class="dv">3</span>, dpi<span class="op">=</span><span class="dv">120</span>)</span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a><span class="co"># Save object</span></span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>adata.write(<span class="st">"results/velocity/hca_myesoph_stochastic.h5ad"</span>, compression<span class="op">=</span><span class="st">'gzip'</span>)</span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a><span class="co"># Estimate RNA velocity with deterministic mode</span></span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity(adata, mode<span class="op">=</span><span class="st">'deterministic'</span>)</span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity_graph(adata, n_jobs<span class="op">=</span><span class="dv">6</span>)</span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity_embedding(adata, basis<span class="op">=</span><span class="st">'umap'</span>)</span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot velocity results</span></span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a>save_stream(adata, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_deterministic/hca_esoph_stream"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">"umap"</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>)</span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a>save_grid(adata, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_deterministic/hca_esoph_grid"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">'umap'</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>, arrow_length<span class="op">=</span><span class="dv">5</span>, arrow_size<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a>save_embedding(adata, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_deterministic/hca_esoph_velocity"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">"umap"</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>, arrow_length<span class="op">=</span><span class="dv">5</span>, arrow_size<span class="op">=</span><span class="dv">3</span>, dpi<span class="op">=</span><span class="dv">120</span>)</span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a><span class="co"># Save object</span></span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>adata.write(<span class="st">"results/velocity/hca_myesoph_deterministic.h5ad"</span>, compression<span class="op">=</span><span class="st">'gzip'</span>)</span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a><span class="co"># Estimate RNA velocity with dynamical mode</span></span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a>scv.tl.recover_dynamics(adata, n_jobs<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity(adata, mode<span class="op">=</span><span class="st">'dynamical'</span>)</span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity_graph(adata, n_jobs<span class="op">=</span><span class="dv">6</span>)</span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity_embedding(adata, basis<span class="op">=</span><span class="st">'umap'</span>)</span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot velocity results</span></span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a>save_stream(adata, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_dynamical/hca_esoph_stream"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">"umap"</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>)</span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>save_grid(adata, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_dynamical/hca_esoph_grid"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">'umap'</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>, arrow_length<span class="op">=</span><span class="dv">5</span>, arrow_size<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a>save_embedding(adata, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_dynamical/hca_esoph_velocity"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">"umap"</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>, arrow_length<span class="op">=</span><span class="dv">5</span>, arrow_size<span class="op">=</span><span class="dv">3</span>, dpi<span class="op">=</span><span class="dv">120</span>)</span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a><span class="co"># Save object</span></span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a>adata.write(<span class="st">"results/velocity/hca_myesoph_dynamical.h5ad"</span>, compression<span class="op">=</span><span class="st">'gzip'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="velocity-over-epitelial-subset" class="level4" data-number="9.1.2.1">
+<h4 data-number="9.1.2.1" class="anchored" data-anchor-id="velocity-over-epitelial-subset"><span class="header-section-number">9.1.2.1</span> Velocity over epitelial subset</h4>
+<p>We are only interested in the epithelial cells, so I’ll subset only these cells and apply RNA velocity to them exclusively.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Subset anndata for epithelial cells</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>epi <span class="op">=</span> adata[adata.obs[<span class="st">"Celltypes_2020_names"</span>].isin([<span class="st">'Epi_basal'</span>, <span class="st">'Epi_suprabasal'</span>, <span class="st">'Epi_stratified'</span>, <span class="st">'Epi_upper'</span>])].copy()</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter and normalize</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>scv.pp.filter_and_normalize(epi, min_shared_counts<span class="op">=</span><span class="dv">20</span>, n_top_genes<span class="op">=</span><span class="dv">2000</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate cell moments</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>scv.pp.moments(epi, n_pcs<span class="op">=</span><span class="dv">30</span>, n_neighbors<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Re-calculate the embedding (UMAP)</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>scv.tl.umap(epi)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Estimate RNA velocity with stochastic mode</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity(epi, mode<span class="op">=</span><span class="st">'stochastic'</span>)</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity_graph(epi, n_jobs<span class="op">=</span><span class="dv">6</span>)</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity_embedding(epi, basis<span class="op">=</span><span class="st">'umap'</span>)</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot velocity results</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>save_stream(epi, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_stochastic/hca_esoph_epi_stream"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">"umap"</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>)</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>save_grid(epi, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_stochastic/hca_esoph_epi_grid"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">'umap'</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>, arrow_length<span class="op">=</span><span class="dv">5</span>, arrow_size<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>save_embedding(epi, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_stochastic/hca_esoph_epi_velocity"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">"umap"</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>, arrow_length<span class="op">=</span><span class="dv">5</span>, arrow_size<span class="op">=</span><span class="dv">3</span>, dpi<span class="op">=</span><span class="dv">120</span>)</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Save object</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>adata.write(<span class="st">"results/velocity/hca_myesoph_epi_stochastic.h5ad"</span>, compression<span class="op">=</span><span class="st">'gzip'</span>)</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="co"># Estimate RNA velocity with deterministic mode</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity(epi, mode<span class="op">=</span><span class="st">'deterministic'</span>)</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity_graph(epi, n_jobs<span class="op">=</span><span class="dv">6</span>)</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity_embedding(epi, basis<span class="op">=</span><span class="st">'umap'</span>)</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot velocity results</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>save_stream(epi, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_deterministic/hca_esoph_epi_stream"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">"umap"</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>)</span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>save_grid(epi, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_deterministic/hca_esoph_epi_grid"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">'umap'</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>, arrow_length<span class="op">=</span><span class="dv">5</span>, arrow_size<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>save_embedding(epi, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_deterministic/hca_esoph_epi_velocity"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">"umap"</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>, arrow_length<span class="op">=</span><span class="dv">5</span>, arrow_size<span class="op">=</span><span class="dv">3</span>, dpi<span class="op">=</span><span class="dv">120</span>)</span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a><span class="co"># Save object</span></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>adata.write(<span class="st">"results/velocity/hca_myesoph_epi_deterministic.h5ad"</span>, compression<span class="op">=</span><span class="st">'gzip'</span>)</span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a><span class="co"># Estimate RNA velocity with dynamical mode</span></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>scv.tl.recover_dynamics(epi, n_jobs<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity(epi, mode<span class="op">=</span><span class="st">'dynamical'</span>)</span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity_graph(epi, n_jobs<span class="op">=</span><span class="dv">6</span>)</span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity_embedding(epi, basis<span class="op">=</span><span class="st">'umap'</span>)</span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot velocity results</span></span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a>save_stream(epi, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_dynamical/hca_esoph_epi_stream"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">"umap"</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>)</span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a>save_grid(epi, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_dynamical/hca_esoph_epi_grid"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">'umap'</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>, arrow_length<span class="op">=</span><span class="dv">5</span>, arrow_size<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>save_embedding(epi, <span class="bu">file</span><span class="op">=</span><span class="st">"results/velocity/scvelo_dynamical/hca_esoph_epi_velocity"</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>], basis<span class="op">=</span><span class="st">"umap"</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>, arrow_length<span class="op">=</span><span class="dv">5</span>, arrow_size<span class="op">=</span><span class="dv">3</span>, dpi<span class="op">=</span><span class="dv">120</span>)</span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a><span class="co"># Save object</span></span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>adata.write(<span class="st">"results/velocity/hca_myesoph_epi_dynamical.h5ad"</span>, compression<span class="op">=</span><span class="st">'gzip'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="analyzing-velocity-output" class="level4" data-number="9.1.2.2">
+<h4 data-number="9.1.2.2" class="anchored" data-anchor-id="analyzing-velocity-output"><span class="header-section-number">9.1.2.2</span> Analyzing velocity output</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>scv.tl.velocity_confidence(adata)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>scv.pl.scatter(adata, basis<span class="op">=</span><span class="st">'umap'</span>, color<span class="op">=</span>[<span class="st">'velocity_length'</span>, <span class="st">'velocity_confidence'</span>], color_map<span class="op">=</span><span class="st">'coolwarm'</span>, perc<span class="op">=</span>[<span class="dv">0</span>, <span class="dv">100</span>], save<span class="op">=</span><span class="st">"results/velocity/scvelo_stochastic/hca_myesoph_confidence.png"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>scv.tl.rank_velocity_genes(adata, groupby<span class="op">=</span><span class="st">'Celltypes_2020_names'</span>, min_corr<span class="op">=</span><span class="fl">0.3</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>df scv.get_df(adata.uns[<span class="st">'rank_velocity_genes'</span>][<span class="st">'names'</span>])</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>df.to_csv(<span class="st">"results/velocity/scvelo_stochastic/hca_myesoph_genes_rank.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="generic-script-for-scvelo" class="level4" data-number="9.1.2.3">
+<h4 data-number="9.1.2.3" class="anchored" data-anchor-id="generic-script-for-scvelo"><span class="header-section-number">9.1.2.3</span> Generic script for scvelo</h4>
+<p>I create a generalized script to run all of the RNA velocity steps together. This script will allow me to calculate RNA velocities as well as plot embeddings with velocities, plot velocity confidence, and rank genes.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">"""</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co">DESCRIPTION: perform RNA velocity and save plots</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co">AUTHOR: Darío González</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">"""</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Imports</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> argparse</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanpy <span class="im">as</span> sp</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scvelo <span class="im">as</span> scv</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Parse arguments</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>parser <span class="op">=</span> argparse.ArgumentParser(description<span class="op">=</span><span class="st">"Perform RNA velocity and save plots"</span>)</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>parser.add_argument(<span class="st">'-m'</span>, <span class="st">'--mode'</span>, <span class="bu">help</span><span class="op">=</span><span class="st">"Scvelo modes to use and save plots for"</span>, action<span class="op">=</span><span class="st">'store'</span>, choices<span class="op">=</span>[<span class="st">'stochastic'</span>, <span class="st">'deterministic'</span>, <span class="st">'dynamical'</span>], nargs<span class="op">=</span><span class="st">'+'</span>, default<span class="op">=</span>[<span class="st">'stochastic'</span>, <span class="st">'deterministic'</span>, <span class="st">'dynamical'</span>])</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>parser.add_argument(<span class="st">'-d'</span>, <span class="st">'--directory'</span>, <span class="bu">help</span><span class="op">=</span><span class="st">"Folder in to which to store the results"</span>, action<span class="op">=</span><span class="st">'store'</span>, default<span class="op">=</span><span class="st">"."</span>)</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>parser.add_argument(<span class="st">'-w'</span>, <span class="st">'--write_name'</span>, <span class="bu">help</span><span class="op">=</span><span class="st">"Base name of the plots files to be written"</span>, action<span class="op">=</span><span class="st">'store'</span>, required<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>parser.add_argument(<span class="st">'-f'</span>, <span class="st">'--format'</span>, <span class="bu">help</span><span class="op">=</span><span class="st">"Formats in which to save the plots. One or more of [svg,png,pdf]"</span>, action<span class="op">=</span><span class="st">'store'</span>, nargs<span class="op">=</span><span class="st">'+'</span>, choices<span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>, <span class="st">'pdf'</span>], default<span class="op">=</span>[<span class="st">'svg'</span>, <span class="st">'png'</span>])</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>parser.add_argument(<span class="st">'-a'</span>, <span class="st">'--velocity'</span>, <span class="bu">help</span><span class="op">=</span><span class="st">"Perform velocity"</span>, action<span class="op">=</span><span class="st">'store_true'</span>)</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>parser.add_argument(<span class="st">'-u'</span>, <span class="st">'--umap'</span>, <span class="bu">help</span><span class="op">=</span><span class="st">"Calculate UMAP"</span>, action<span class="op">=</span><span class="st">'store_true'</span>)</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>parser.add_argument(<span class="st">'-c'</span>, <span class="st">'--confidence'</span>, <span class="bu">help</span><span class="op">=</span><span class="st">"Save confidence plots"</span>, action<span class="op">=</span><span class="st">'store_true'</span>)</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>parser.add_argument(<span class="st">'-r'</span>, <span class="st">'--rank'</span>, <span class="bu">help</span><span class="op">=</span><span class="st">"Save table with velocity gene rank per cluster group"</span>, action<span class="op">=</span><span class="st">'store_true'</span>)</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>parser.add_argument(<span class="st">'-s'</span>, <span class="st">'--save'</span>, <span class="bu">help</span><span class="op">=</span><span class="st">"File name to save anndata object with velocity data"</span>, action<span class="op">=</span><span class="st">'store'</span>, default<span class="op">=</span><span class="va">None</span>)</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>parser.add_argument(<span class="st">'adata'</span>, <span class="bu">help</span><span class="op">=</span><span class="st">"File with Anndata object. It should have spliced and unspliced layers."</span>)</span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>args <span class="op">=</span> parser.parse_args()</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(args)</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Funtions to quickly save plots</span></span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> save_stream(adata, <span class="bu">file</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">"svg"</span>, <span class="st">"png"</span>], <span class="op">**</span>kwargs):</span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> extension <span class="kw">in</span> <span class="bu">format</span>:</span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>        file_name <span class="op">=</span> <span class="bu">file</span> <span class="op">+</span> <span class="st">"."</span> <span class="op">+</span> extension</span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>        scv.pl.velocity_embedding_stream(adata, save <span class="op">=</span> file_name, <span class="op">**</span>kwargs)</span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> save_grid(adata, <span class="bu">file</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">"svg"</span>, <span class="st">"png"</span>], <span class="op">**</span>kwargs):</span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> extension <span class="kw">in</span> <span class="bu">format</span>:</span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>        file_name <span class="op">=</span> <span class="bu">file</span> <span class="op">+</span> <span class="st">"."</span> <span class="op">+</span> extension</span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a>        scv.pl.velocity_embedding_grid(adata, save <span class="op">=</span> file_name, <span class="op">**</span>kwargs)  </span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> save_embedding(adata, <span class="bu">file</span>, <span class="bu">format</span><span class="op">=</span>[<span class="st">"svg"</span>, <span class="st">"png"</span>], <span class="op">**</span>kwargs):</span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> extension <span class="kw">in</span> <span class="bu">format</span>:</span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a>        file_name <span class="op">=</span> <span class="bu">file</span> <span class="op">+</span> <span class="st">"."</span> <span class="op">+</span> extension</span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a>        scv.pl.velocity_embedding(adata, save <span class="op">=</span> file_name, <span class="op">**</span>kwargs)</span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a><span class="co"># Read the data</span></span>
+<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> scv.read(args.adata)</span>
+<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> args.velocity:</span>
+<span id="cb6-50"><a href="#cb6-50" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Filter and normalize</span></span>
+<span id="cb6-51"><a href="#cb6-51" aria-hidden="true" tabindex="-1"></a>    scv.pp.filter_and_normalize(adata, min_shared_counts<span class="op">=</span><span class="dv">20</span>, n_top_genes<span class="op">=</span><span class="dv">2000</span>)</span>
+<span id="cb6-52"><a href="#cb6-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-53"><a href="#cb6-53" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Calculate cell moments</span></span>
+<span id="cb6-54"><a href="#cb6-54" aria-hidden="true" tabindex="-1"></a>    scv.pp.moments(adata, n_pcs<span class="op">=</span><span class="dv">30</span>, n_neighbors<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb6-55"><a href="#cb6-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-56"><a href="#cb6-56" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> args.umap:</span>
+<span id="cb6-57"><a href="#cb6-57" aria-hidden="true" tabindex="-1"></a>    scv.tl.umap(adata)</span>
+<span id="cb6-58"><a href="#cb6-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-59"><a href="#cb6-59" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> mode <span class="kw">in</span> args.mode:</span>
+<span id="cb6-60"><a href="#cb6-60" aria-hidden="true" tabindex="-1"></a>    save_folder <span class="op">=</span> args.directory <span class="op">+</span> <span class="st">"/scvelo_"</span> <span class="op">+</span> mode <span class="op">+</span> <span class="st">"/"</span></span>
+<span id="cb6-61"><a href="#cb6-61" aria-hidden="true" tabindex="-1"></a>    os.makedirs(save_folder, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb6-62"><a href="#cb6-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-63"><a href="#cb6-63" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> args.velocity:</span>
+<span id="cb6-64"><a href="#cb6-64" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Estimate RNA velocity with stochastic mode</span></span>
+<span id="cb6-65"><a href="#cb6-65" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> mode <span class="op">==</span> <span class="st">'dynamical'</span>:</span>
+<span id="cb6-66"><a href="#cb6-66" aria-hidden="true" tabindex="-1"></a>            scv.tl.recover_dynamics(epi, n_jobs<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb6-67"><a href="#cb6-67" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb6-68"><a href="#cb6-68" aria-hidden="true" tabindex="-1"></a>        scv.tl.velocity(adata, mode<span class="op">=</span>mode)</span>
+<span id="cb6-69"><a href="#cb6-69" aria-hidden="true" tabindex="-1"></a>        scv.tl.velocity_graph(adata, n_jobs<span class="op">=</span><span class="dv">6</span>)</span>
+<span id="cb6-70"><a href="#cb6-70" aria-hidden="true" tabindex="-1"></a>        scv.tl.velocity_embedding(adata, basis<span class="op">=</span><span class="st">'umap'</span>)</span>
+<span id="cb6-71"><a href="#cb6-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-72"><a href="#cb6-72" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Plot velocity results</span></span>
+<span id="cb6-73"><a href="#cb6-73" aria-hidden="true" tabindex="-1"></a>        save_stream(adata, <span class="bu">file</span><span class="op">=</span>(save_folder <span class="op">+</span> args.write_name <span class="op">+</span> <span class="st">"_stream"</span>), <span class="bu">format</span><span class="op">=</span>args.<span class="bu">format</span>, basis<span class="op">=</span><span class="st">"umap"</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>)</span>
+<span id="cb6-74"><a href="#cb6-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-75"><a href="#cb6-75" aria-hidden="true" tabindex="-1"></a>        save_grid(adata, <span class="bu">file</span><span class="op">=</span>(save_folder <span class="op">+</span> args.write_name <span class="op">+</span> <span class="st">"_grid"</span>), <span class="bu">format</span><span class="op">=</span>args.<span class="bu">format</span>, basis<span class="op">=</span><span class="st">'umap'</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>, arrow_length<span class="op">=</span><span class="dv">5</span>, arrow_size<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb6-76"><a href="#cb6-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-77"><a href="#cb6-77" aria-hidden="true" tabindex="-1"></a>        save_embedding(adata, <span class="bu">file</span><span class="op">=</span>(save_folder <span class="op">+</span> args.write_name <span class="op">+</span> <span class="st">"_velocity"</span>), <span class="bu">format</span><span class="op">=</span>args.<span class="bu">format</span>, basis<span class="op">=</span><span class="st">"umap"</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>, arrow_length<span class="op">=</span><span class="dv">5</span>, arrow_size<span class="op">=</span><span class="dv">3</span>, dpi<span class="op">=</span><span class="dv">120</span>)</span>
+<span id="cb6-78"><a href="#cb6-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-79"><a href="#cb6-79" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Calculate confidence</span></span>
+<span id="cb6-80"><a href="#cb6-80" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> args.confidence:</span>
+<span id="cb6-81"><a href="#cb6-81" aria-hidden="true" tabindex="-1"></a>        scv.tl.velocity_confidence(adata)</span>
+<span id="cb6-82"><a href="#cb6-82" aria-hidden="true" tabindex="-1"></a>        scv.pl.scatter(adata, basis<span class="op">=</span><span class="st">'umap'</span>, color<span class="op">=</span>[<span class="st">'velocity_length'</span>, <span class="st">'velocity_confidence'</span>], color_map<span class="op">=</span><span class="st">'coolwarm'</span>, perc<span class="op">=</span>[<span class="dv">0</span>, <span class="dv">100</span>], save<span class="op">=</span>(save_folder <span class="op">+</span> args.write_name <span class="op">+</span> <span class="st">"_confidence.svg"</span>))</span>
+<span id="cb6-83"><a href="#cb6-83" aria-hidden="true" tabindex="-1"></a>        scv.pl.scatter(adata, basis<span class="op">=</span><span class="st">'umap'</span>, color<span class="op">=</span>[<span class="st">'velocity_length'</span>, <span class="st">'velocity_confidence'</span>], color_map<span class="op">=</span><span class="st">'coolwarm'</span>, perc<span class="op">=</span>[<span class="dv">0</span>, <span class="dv">100</span>], save<span class="op">=</span>(save_folder <span class="op">+</span> args.write_name <span class="op">+</span> <span class="st">"_confidence.png"</span>))</span>
+<span id="cb6-84"><a href="#cb6-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-85"><a href="#cb6-85" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Rank genes</span></span>
+<span id="cb6-86"><a href="#cb6-86" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> args.rank:</span>
+<span id="cb6-87"><a href="#cb6-87" aria-hidden="true" tabindex="-1"></a>        scv.tl.rank_velocity_genes(adata, groupby<span class="op">=</span><span class="st">'Celltypes_2020_names'</span>, min_corr<span class="op">=</span><span class="fl">0.3</span>)</span>
+<span id="cb6-88"><a href="#cb6-88" aria-hidden="true" tabindex="-1"></a>        df <span class="op">=</span> scv.get_df(adata.uns[<span class="st">'rank_velocity_genes'</span>][<span class="st">'names'</span>])</span>
+<span id="cb6-89"><a href="#cb6-89" aria-hidden="true" tabindex="-1"></a>        df.to_csv(save_folder <span class="op">+</span> args.write_name <span class="op">+</span> <span class="st">"genes_rank.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb6-90"><a href="#cb6-90" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-91"><a href="#cb6-91" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Save object</span></span>
+<span id="cb6-92"><a href="#cb6-92" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> args.save <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb6-93"><a href="#cb6-93" aria-hidden="true" tabindex="-1"></a>        save_name <span class="op">=</span> args.save <span class="op">+</span> <span class="st">"_"</span> <span class="op">+</span> mode <span class="op">+</span> <span class="st">'.h5ad'</span></span>
+<span id="cb6-94"><a href="#cb6-94" aria-hidden="true" tabindex="-1"></a>        adata.write(save_name, compression<span class="op">=</span><span class="st">'gzip'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Run RNA velocity for the HCA data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># [folia]</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="va">wd</span><span class="op">=</span>/home/dario/TFM/2019.12.31_Meyer/singlecell</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="va">results</span><span class="op">=</span><span class="va">${wd}</span>/results/extending_paper_analysis</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> exec_scvelo.py <span class="dt">\</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">-m</span> dynamical <span class="dt">\</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">--velocity</span> <span class="dt">\</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">--confidence</span> <span class="dt">\</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">--rank</span> <span class="dt">\</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">-d</span> <span class="va">${results}</span>/velocity <span class="dt">\</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">-w</span> hca_myesoph <span class="dt">\</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">-s</span> <span class="va">${results}</span>/velocity/hca_myesoph <span class="dt">\</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    <span class="va">${results}</span>/objects/hca_myesoph.h5ad <span class="kw">|&amp;</span> <span class="fu">tee</span> <span class="va">${wd}</span>/logs/scvelo_dynamical_<span class="va">$(</span><span class="fu">date</span> <span class="st">'+%Y%m%d_%H%M%S'</span><span class="va">)</span>.log</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Save a subset of the file with only epithelium cells.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># [folia]</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanpy <span class="im">as</span> sc</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scvelo <span class="im">as</span> scv</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>os.chdir(<span class="st">"/home/dario/TFM/2019.12.31_Meyer"</span>)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> scv.read(<span class="st">"results/hca_myesoph.h5ad"</span>)</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>epi <span class="op">=</span> adata[adata.obs[<span class="st">"Celltypes_2020_names"</span>].isin([<span class="st">'Epi_basal'</span>, <span class="st">'Epi_suprabasal'</span>, <span class="st">'Epi_stratified'</span>, <span class="st">'Epi_upper'</span>])].copy()</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>epi.write(<span class="st">"results/hca_myesoph_epi.h5ad"</span>, compression<span class="op">=</span><span class="st">'gzip'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Run RNA velocity for the epithelial cells subset regenerating the UMAP.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># [folia]</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> activate d_scanpy</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="va">wd</span><span class="op">=</span>/home/dario/TFM/2019.12.31_Meyer/singlecell/results/extending_paper_analysis</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> exec_scvelo.py <span class="dt">\</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">-m</span> stochastic deterministic dynamical <span class="dt">\</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">-aucr</span> <span class="dt">\</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">-d</span> <span class="va">${wd}</span>/velocity <span class="dt">\</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">-w</span> hca_myesoph_epi <span class="dt">\</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">-s</span> <span class="va">${wd}</span>/velocity/hca_myesoph_epi <span class="dt">\</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    <span class="va">${wd}</span>/objects/hca_myesoph_epi.h5ad <span class="kw">|&amp;</span> <span class="fu">tee</span> <span class="va">${wd}</span>/logs/scvelo_epi_<span class="va">$(</span><span class="fu">date</span> <span class="st">'+%Y%m%d_%H%M%S'</span><span class="va">)</span>.log</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Run RNA velocity for the epithelial cells subset with the old UMAP.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># [folia]</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> activate d_scanpy</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="va">wd</span><span class="op">=</span>/home/dario/TFM/2019.12.31_Meyer/singlecell/results/extending_paper_analysis</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> exec_scvelo.py <span class="dt">\</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">-m</span> stochastic deterministic dynamical <span class="dt">\</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">-acr</span> <span class="dt">\</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">-d</span> <span class="va">${wd}</span>/velocity <span class="dt">\</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">-w</span> hca_myesoph_epi <span class="dt">\</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">-s</span> <span class="va">${wd}</span>/velocity/hca_myesoph_epi <span class="dt">\</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    <span class="va">${wd}</span>/objects/hca_myesoph_epi.h5ad <span class="kw">|&amp;</span> <span class="fu">tee</span> <span class="va">${wd</span><span class="op">/%</span><span class="ss">results</span><span class="pp">*</span><span class="op">/</span><span class="va">}</span>/logs/scvelo_epi_<span class="va">$(</span><span class="fu">date</span> <span class="st">'+%Y%m%d_%H%M%S'</span><span class="va">)</span>.log</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="further-analyses" class="level4" data-number="9.1.2.4">
+<h4 data-number="9.1.2.4" class="anchored" data-anchor-id="further-analyses"><span class="header-section-number">9.1.2.4</span> Further analyses</h4>
+<p>I’m going to analyze further the results for RNA velocity from scvelo.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># [folia]</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanpy <span class="im">as</span> sp</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scvelo <span class="im">as</span> scv</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> <span class="st">"/home/dario/TFM/2019.12.31_Meyer/singlecell/results/extending_paper_analysis/velocity"</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Read data in</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>adata <span class="op">=</span> scv.read(<span class="ss">f"</span><span class="sc">{</span>results<span class="sc">}</span><span class="ss">/hca_myesoph_dynamical.h5ad"</span>)</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Velocity length and confidence per cluster</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>keys <span class="op">=</span> [<span class="st">'velocity_length'</span>, <span class="st">'velocity_confidence'</span>]</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> adata.obs.groupby(<span class="st">'Celltypes_2020_names'</span>)[keys].mean().T</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>df.to_csv(<span class="ss">f"</span><span class="sc">{</span>results<span class="sc">}</span><span class="ss">/hca_myesoph_dynamical_confidence_per_cluster.csv"</span>)</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Cycling progenitors [NON FUNCTIONAL]</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>scv.tl.score_genes_cell_cycle(adata)</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>scv.pl.scatter(adata, color_gradients<span class="op">=</span>[<span class="st">'S_score'</span>, <span class="st">'G2M_score'</span>], smooth<span class="op">=</span><span class="va">True</span>, perc<span class="op">=</span>[<span class="dv">0</span>, <span class="dv">100</span>], size<span class="op">=</span><span class="dv">20</span>, save<span class="op">=</span><span class="ss">f"</span><span class="sc">{</span>results<span class="sc">}</span><span class="ss">/hca_myesoph_dynamical_cycling_progenitors.svg"</span>)</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>scv.pl.scatter(adata, color_gradients<span class="op">=</span>[<span class="st">'S_score'</span>, <span class="st">'G2M_score'</span>], smooth<span class="op">=</span><span class="va">True</span>, perc<span class="op">=</span>[<span class="dv">0</span>, <span class="dv">100</span>], figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="dv">8</span>), save<span class="op">=</span><span class="ss">f"</span><span class="sc">{</span>results<span class="sc">}</span><span class="ss">/hca_myesoph_dynamical_cycling_progenitors.png"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Re-generate some of the plots because they have bad quality. I import the saved h5ad with velocity information to re-generate the plots with higher quality for the pngs. Sadly, scvelo plots incorrectly the SVGs, the colorbar is displaced over the plotting area. I could try to troubleshoot the SVG generation, but that will take a long time. So, I can only generate PNGs if I want to get results quickly.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scanpy <span class="im">as</span> sp</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> scvelo <span class="im">as</span> scv</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>wd <span class="op">=</span> <span class="st">"/home/dario/TFM/2019.12.31_Meyer/singlecell/results/extending_paper_analysis/velocity"</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> [<span class="ss">f"</span><span class="sc">{</span>wd<span class="sc">}</span><span class="ss">/scvelo_dynamical"</span>, <span class="ss">f"</span><span class="sc">{</span>wd<span class="sc">}</span><span class="ss">/scvelo_stochastic"</span>, <span class="ss">f"</span><span class="sc">{</span>wd<span class="sc">}</span><span class="ss">/scvelo_deterministic"</span>]</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> results:</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Get model name</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    mode <span class="op">=</span> i.split(<span class="st">'_'</span>)[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Read the data for the model</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    adata <span class="op">=</span> scv.read(<span class="ss">f"</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">/hca_esoph_epi_</span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss">.h5ad"</span>)</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Replot confidence and length PNGs with high resolution</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>    scv.pl.scatter(adata, basis<span class="op">=</span><span class="st">'umap'</span>, color<span class="op">=</span><span class="st">'velocity_confidence'</span>, color_map<span class="op">=</span><span class="st">'coolwarm'</span>, perc<span class="op">=</span>[<span class="dv">0</span>, <span class="dv">100</span>], size<span class="op">=</span><span class="dv">6</span>, alpha<span class="op">=</span><span class="dv">1</span>, sort_order<span class="op">=</span><span class="va">False</span>, title<span class="op">=</span><span class="ss">f"Velocity conficence </span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss"> model"</span>, dpi<span class="op">=</span><span class="dv">300</span>, save<span class="op">=</span><span class="ss">f"</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">/hca_esoph_epi_</span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss">_confidence.png"</span>)</span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    scv.pl.scatter(adata, basis<span class="op">=</span><span class="st">'umap'</span>, color<span class="op">=</span><span class="st">'velocity_length'</span>, color_map<span class="op">=</span><span class="st">'coolwarm'</span>, perc<span class="op">=</span>[<span class="dv">0</span>, <span class="dv">100</span>], size<span class="op">=</span><span class="dv">6</span>, alpha<span class="op">=</span><span class="dv">1</span>, sort_order<span class="op">=</span><span class="va">False</span>, dpi<span class="op">=</span><span class="dv">300</span>, title<span class="op">=</span><span class="ss">f"Velocity length </span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss"> model"</span>, save<span class="op">=</span><span class="ss">f"</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">/hca_esoph_epi_</span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss">_length.png"</span>)</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Replot stream PNG with high resolution</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>    scv.pl.velocity_embedding_stream(adata, basis<span class="op">=</span><span class="st">"umap"</span>, color<span class="op">=</span><span class="st">"Celltypes_2020_names"</span>, palette<span class="op">=</span><span class="st">'tab20'</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>), legend_loc<span class="op">=</span><span class="st">'right margin'</span>, title<span class="op">=</span><span class="ss">f"RNA velocity stream, </span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss"> model"</span>, dpi<span class="op">=</span><span class="dv">300</span>, save<span class="op">=</span>(<span class="ss">f"</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">/hca_esoph_epi_</span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss">_stream.png"</span>))</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Cycling progenitors</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>    scv.tl.score_genes_cell_cycle(adata)</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Plot cycling progenitors</span></span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>    scv.pl.scatter(adata, color_gradients<span class="op">=</span>[<span class="st">'S_score'</span>, <span class="st">'G2M_score'</span>], edgecolor<span class="op">=</span><span class="st">'gainsboro'</span>, linewidths<span class="op">=</span><span class="fl">0.1</span>, colorbar<span class="op">=</span><span class="va">True</span>, smooth<span class="op">=</span><span class="va">False</span>, perc<span class="op">=</span>[<span class="dv">0</span>, <span class="dv">100</span>], size<span class="op">=</span><span class="dv">6</span>, alpha<span class="op">=</span><span class="dv">1</span>, save<span class="op">=</span><span class="ss">f"</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">/hca_esoph_epi_</span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss">_cycling_progenitors.svg"</span>)</span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>    scv.pl.scatter(adata, color_gradients<span class="op">=</span>[<span class="st">'S_score'</span>, <span class="st">'G2M_score'</span>], edgecolor<span class="op">=</span><span class="st">'gainsboro'</span>, linewidths<span class="op">=</span><span class="fl">0.1</span>, colorbar<span class="op">=</span><span class="va">True</span>, smooth<span class="op">=</span><span class="va">False</span>, perc<span class="op">=</span>[<span class="dv">0</span>, <span class="dv">100</span>], size<span class="op">=</span><span class="dv">6</span>, alpha<span class="op">=</span><span class="dv">1</span>, dpi<span class="op">=</span><span class="dv">300</span>, save<span class="op">=</span><span class="ss">f"</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">/hca_esoph_epi_</span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss">_cycling_progenitors.png"</span>)</span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>    scv.pl.scatter(adata, basis<span class="op">=</span><span class="st">'umap'</span>, color<span class="op">=</span><span class="st">'phase'</span>, palette<span class="op">=</span>[<span class="st">'silver'</span>, <span class="st">'coral'</span>, <span class="st">'royalblue'</span>], size<span class="op">=</span><span class="dv">6</span>, alpha<span class="op">=</span><span class="fl">0.4</span>, dpi<span class="op">=</span><span class="dv">300</span>, title<span class="op">=</span><span class="ss">f"Cell phase, </span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss"> model"</span>, save<span class="op">=</span><span class="ss">f"</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">/hca_esoph_epi_</span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss">_phase.svg"</span>)</span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a>    scv.pl.scatter(adata, basis<span class="op">=</span><span class="st">'umap'</span>, color<span class="op">=</span><span class="st">'phase'</span>, palette<span class="op">=</span>[<span class="st">'silver'</span>, <span class="st">'coral'</span>, <span class="st">'royalblue'</span>], size<span class="op">=</span><span class="dv">6</span>, alpha<span class="op">=</span><span class="fl">0.4</span>, dpi<span class="op">=</span><span class="dv">300</span>, title<span class="op">=</span><span class="ss">f"Cell phase, </span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss"> model"</span>, save<span class="op">=</span><span class="ss">f"</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">/hca_esoph_epi_</span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss">_phase.png"</span>)</span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Save the object</span></span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a>    adata.write(<span class="ss">f"</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">/hca_esoph_epi_</span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss">.h5ad"</span>)</span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-34"><a href="#cb12-34" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> results:</span>
+<span id="cb12-35"><a href="#cb12-35" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Get model name</span></span>
+<span id="cb12-36"><a href="#cb12-36" aria-hidden="true" tabindex="-1"></a>    mode <span class="op">=</span> i.split(<span class="st">'_'</span>)[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb12-37"><a href="#cb12-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-38"><a href="#cb12-38" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Read the data for the model</span></span>
+<span id="cb12-39"><a href="#cb12-39" aria-hidden="true" tabindex="-1"></a>    adata <span class="op">=</span> scv.read(<span class="ss">f"</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">/hca_esoph_epi_</span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss">.h5ad"</span>)</span>
+<span id="cb12-40"><a href="#cb12-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-41"><a href="#cb12-41" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Get ranked genes</span></span>
+<span id="cb12-42"><a href="#cb12-42" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> scv.get_df(adata.uns[<span class="st">'rank_velocity_genes'</span>][<span class="st">'names'</span>])</span>
+<span id="cb12-43"><a href="#cb12-43" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb12-44"><a href="#cb12-44" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Plot 5 most influential genes per cluster</span></span>
+<span id="cb12-45"><a href="#cb12-45" aria-hidden="true" tabindex="-1"></a>    kwargs <span class="op">=</span> <span class="bu">dict</span>(frameon<span class="op">=</span><span class="va">False</span>, size<span class="op">=</span><span class="dv">10</span>, linewidth<span class="op">=</span><span class="fl">0.5</span>, )</span>
+<span id="cb12-46"><a href="#cb12-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-47"><a href="#cb12-47" aria-hidden="true" tabindex="-1"></a>    <span class="co">#fig, axs = plt.subplots(len(df.columns))</span></span>
+<span id="cb12-48"><a href="#cb12-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-49"><a href="#cb12-49" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j, ct <span class="kw">in</span> <span class="bu">enumerate</span>(df.columns):</span>
+<span id="cb12-50"><a href="#cb12-50" aria-hidden="true" tabindex="-1"></a>        <span class="co">#plt.subplot(len(df.columns), 1, j+1)</span></span>
+<span id="cb12-51"><a href="#cb12-51" aria-hidden="true" tabindex="-1"></a>        <span class="co">#scv.pl.scatter(adata, df[ct][:5], ylabel=str(ct), **kwargs)</span></span>
+<span id="cb12-52"><a href="#cb12-52" aria-hidden="true" tabindex="-1"></a>        <span class="co">#scv.pl.scatter(adata, df[ct][:5], ylabel=str(ct), **kwargs, save=f"{i}/hca_esoph_epi_{mode}_important_genes_{ct}.svg")</span></span>
+<span id="cb12-53"><a href="#cb12-53" aria-hidden="true" tabindex="-1"></a>        scv.pl.scatter(adata, df[ct][:<span class="dv">5</span>], ylabel<span class="op">=</span><span class="bu">str</span>(ct), <span class="op">**</span>kwargs, save<span class="op">=</span><span class="ss">f"</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">/hca_esoph_epi_</span><span class="sc">{</span>mode<span class="sc">}</span><span class="ss">_important_genes_</span><span class="sc">{</span>ct<span class="sc">}</span><span class="ss">.png"</span>, dpi<span class="op">=</span><span class="dv">300</span>)</span>
+<span id="cb12-54"><a href="#cb12-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-55"><a href="#cb12-55" aria-hidden="true" tabindex="-1"></a>    <span class="co">#plt.savefig(f"{i}/hca_esoph_epi_{mode}_important_genes.png", dpi=300)</span></span>
+<span id="cb12-56"><a href="#cb12-56" aria-hidden="true" tabindex="-1"></a>    <span class="co">#fig.savefig(f"{i}/hca_esoph_epi_{mode}_important_genes.svg")</span></span>
+<span id="cb12-57"><a href="#cb12-57" aria-hidden="true" tabindex="-1"></a>    <span class="co">#fig.savefig(f"{i}/hca_esoph_epi_{mode}_important_genes.png")</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+</section>
+</section>
+<section id="trajectory-inference-with-slingshot" class="level2" data-number="9.2">
+<h2 data-number="9.2" class="anchored" data-anchor-id="trajectory-inference-with-slingshot"><span class="header-section-number">9.2</span> Trajectory inference with Slingshot</h2>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Important
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This analysis is entirely of data from the original paper, even if I’m using the combined Seurat object. So, it’s as if I was doing the trajectory inference analysis directly to the original paper object.</p>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Slingshot information
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<div class="line-block"><strong>Link</strong>: <a href="https://bioconductor.org/packages/release/bioc/html/slingshot.html" class="uri">https://bioconductor.org/packages/release/bioc/html/slingshot.html</a><br>
+<strong>Citation</strong>: <a href="https://bmcgenomics.biomedcentral.com/articles/10.1186/s12864-018-4772-0" class="uri">https://bmcgenomics.biomedcentral.com/articles/10.1186/s12864-018-4772-0</a><br>
+<strong>Development</strong>: <a href="https://github.com/kstreet13/slingshot" class="uri">https://github.com/kstreet13/slingshot</a></div>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+About SingleCellExperiment
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Slingshot uses SingleCellExperiment objects. To understand the ‘SingleCellExperiment’ class organization, it is somewhat documented <a href="https://bioconductor.org/packages/release/bioc/vignettes/SingleCellExperiment/inst/doc/intro.html">here</a> and <a href="https://bioconductor.org/packages/release/bioc/manuals/SingleCellExperiment/man/SingleCellExperiment.pdf">here</a>, and you also need to look the class ‘RangedSummarizedExperiment’, that it extends, which is explained <a href="https://bioconductor.org/packages/3.18/bioc/vignettes/SummarizedExperiment/inst/doc/SummarizedExperiment.html">here</a></p>
+</div>
+</div>
+<p>I’m following the instructions in the trajectory inference <a href="https://bioconductor.org/packages/release/bioc/vignettes/slingshot/inst/doc/vignette.html">Slingshot tutorial</a>.</p>
+<p>As stated in the <a href="https://www.nature.com/articles/s41587-019-0071-9">this</a> article comparing single cell trajectory inference methods, Slingshot should be used when there aren’t going to be disconnected trajectories. Therefore, it is a good thing that I’m only analyzing a subset of epithelial cells.</p>
+<p>To run trajectory inference with Slingshot you can use the wrapper function <code>slingshot()</code> (which is recommended), or the functions <code>getLineages()</code> and <code>getCurves()</code>. These functions take a matrix or a “SingleCellExperiment” object as input. Hence, I’ll convert my Seurat object to SingleCellExperiment. There is a <a href="https://satijalab.org/seurat/archive/v4.3/conversion_vignette">Seurat tutorial for conversion</a>.</p>
+<p>I load my comparison object in R and transform it to SingleCellExperiment.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># [folia]</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Imports</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(Seurat)</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Load comparison Seurat object</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>hca_myesoph <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"/home/dario/TFM/2019.12.31_Meyer/results/comparison_hca_myresults/hca_myesoph.rds"</span>)</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Subsetting the object only to epithelial cells</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="fu">Idents</span>(hca_myesoph) <span class="ot">&lt;-</span> hca_myesoph<span class="sc">@</span>meta.data<span class="sc">$</span>Celltypes_updated_July_2020</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>hca_myesoph_epi <span class="ot">&lt;-</span> <span class="fu">subset</span>(hca_myesoph, <span class="at">idents =</span> <span class="fu">c</span>(<span class="st">"Epi_basal"</span>, <span class="st">"Epi_suprabasal"</span>, <span class="st">"Epi_stratified"</span>, <span class="st">"Epi_upper"</span>))</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert SeuratObject to SingleCellExperiment with Seurat function 'as.SingleCellExperiment()'</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>hca_my_epi_sce <span class="ot">&lt;-</span> <span class="fu">as.SingleCellExperiment</span>(hca_myesoph_epi)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(slingshot)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Run trajectory inference with slingshot</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>hca_my_epi_sce <span class="ot">&lt;-</span> <span class="fu">slingshot</span>(hca_my_epi_sce, <span class="at">clusterLabels =</span> <span class="st">'Celltypes_updated_July_2020'</span>, <span class="at">reducedDim =</span> <span class="st">'UMAP'</span>)</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="do">###############</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot results</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="do">###############</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(grDevices)</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(RColorBrewer)</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot trajectory (curves how they are called by Slingshot)</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>colors <span class="ot">&lt;-</span> <span class="fu">colorRampPalette</span>(<span class="fu">brewer.pal</span>(<span class="dv">11</span>,<span class="st">'Spectral'</span>)[<span class="sc">-</span><span class="dv">6</span>])(<span class="dv">100</span>)</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>plotcol <span class="ot">&lt;-</span> colors[<span class="fu">cut</span>(hca_my_epi_sce<span class="sc">$</span>slingPseudotime_1, <span class="at">breaks=</span><span class="dv">100</span>)]</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a><span class="fu">png</span>(<span class="st">"results/comparison_hca_myresults/velocity/slingshot_trajectory.png"</span>, <span class="at">width=</span><span class="dv">1000</span>, <span class="at">height=</span><span class="dv">1000</span>, <span class="at">units=</span><span class="st">"px"</span>)</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a><span class="co">#layout(mat = matrix(1:2, ncol=2), width = c(4, 1), height = c(1, 1))</span></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">reducedDims</span>(hca_my_epi_sce)<span class="sc">$</span>UMAP, <span class="at">col =</span> plotcol, <span class="at">pch=</span><span class="dv">16</span>, <span class="at">asp =</span> <span class="dv">1</span>)</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(<span class="fu">SlingshotDataSet</span>(hca_my_epi_sce), <span class="at">lwd=</span><span class="dv">2</span>, <span class="at">col=</span><span class="st">'black'</span>)</span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a><span class="co">#legend_image &lt;- as.raster(colors, ncol=1)</span></span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a><span class="co">#plot(x = c(0, 2), y = c(0, 1), type = 'n', axes = FALSE, xlab = '', ylab = '', main = 'Legend')</span></span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a><span class="co">#rasterImage(legend_image, 0, 0, 1, 1)</span></span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a><span class="fu">dev.off</span>()</span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot lineage structure</span></span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a><span class="fu">png</span>(<span class="st">"results/comparison_hca_myresults/velocity/slingshot_lineage.png"</span>, <span class="at">width=</span><span class="dv">1000</span>, <span class="at">height=</span><span class="dv">1000</span>, <span class="at">units=</span><span class="st">"px"</span>)</span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">reducedDims</span>(hca_my_epi_sce)<span class="sc">$</span>UMAP, <span class="at">col =</span> <span class="fu">brewer.pal</span>(<span class="dv">9</span>,<span class="st">'Set1'</span>)[<span class="fu">as.numeric</span>(<span class="fu">droplevels</span>(hca_my_epi_sce<span class="sc">$</span>Celltypes_updated_July_2020))], <span class="at">pch=</span><span class="dv">16</span>, <span class="at">asp =</span> <span class="dv">1</span>)</span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(<span class="fu">SlingshotDataSet</span>(hca_my_epi_sce), <span class="at">lwd=</span><span class="dv">2</span>, <span class="at">type =</span> <span class="st">'lineages'</span>, <span class="at">col =</span> <span class="st">'black'</span>)</span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a><span class="fu">legend</span>(<span class="at">x=</span><span class="st">"topright"</span>, <span class="at">legend=</span><span class="fu">c</span>(<span class="st">"Epi_basal"</span>, <span class="st">"Epi_stratified"</span>, <span class="st">"Epi_suprabasal"</span>, <span class="st">"Epi_upper"</span>), <span class="at">col=</span><span class="fu">brewer.pal</span>(<span class="dv">9</span>,<span class="st">'Set1'</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>], <span class="at">pch=</span><span class="dv">16</span>, <span class="at">cex=</span><span class="dv">2</span>)</span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a><span class="fu">dev.off</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The starting and ending clusters can be found in the ‘SlingshotDataSet’ object, inside the slot <code>slingParams</code> as <code>star.clus</code> and <code>end.clus</code>.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./combining_seurat_objects.html" class="pagination-link  aria-label=" &lt;span="" my="" seurat="" and="" authors="" seurat&lt;="" span&gt;"="">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Combining my Seurat and authors Seurat</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

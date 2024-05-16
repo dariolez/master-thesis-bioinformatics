@@ -1,0 +1,20 @@
+# Preface {.unnumbered}
+
+This book holds the code executed as part of my master thesis for the [University Master Degree in Bioinformatics and Computational Biology](https://uam.es/CentroEstudiosPosgrado/(en_GB)-MU_Bioinformatica_Y_Biologia_Computacional/1446835046419.htm?language=en_GB&nDept=8&pid=1446835033153&pidDept=1446835035396) at the Autonomous University of Madrid.
+
+Pages with code and explanations are organized thematically, rather than chronologically. Note that, because scripts and code were executed in different computers depending on hardware needs, **output from execution is not included along its code**, just the code utilized. Additionally, many scripts and code were written for the specific file structure within the computers used during the master thesis. So, hardcoded path variables will be present, and as well some scripts that were used to organize files.
+
+The master thesis consisted in the analysis of a publicly available scRNA-seq dataset. Particularly, from the following scientific article:
+
+::: {.callout-note}
+## Paper information
+
+| **Title:** scRNA-seq assessment of the human lung, spleen, and esophagus tissue stability after cold preservation
+| **Authors (first and last):** E. Madisoon, K. B. Meyer et al.
+| **Year:** 2020 
+| **Link:** <https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1906-x>
+:::
+
+::: {.callout-note}
+Some of the code, scripts and their explanations are being held back for confidentiality purposes.
+:::

@@ -1,0 +1,168 @@
+---
+execute:
+  eval: false
+---
+
+# Inspect original paper analysis {#sec-inspect-original}
+
+Inspection of the authors Seurat object to check the file is fine, check their analysis and find metadata that can be used in the master thesis.
+
+## Imports and data loading
+
+```{r}
+library(Seurat)
+
+hca_esoph <- readRDS("/mnt/bazar/dario_TFM/2019.12.31_Meyer/data+analysis/esophagus/singlecell/paper_analysis/oesophagus_ts.rds")
+```
+
+## Seurat version
+
+```{r}
+# Check Object version
+Version(hca_esoph)
+```
+
+The Seurat object from the paper was created with Seurat 3.0.1. With version 4.0.0 Seurat changed the definition of Seurat objects to be defined by the package SeuratObject, instead of Seurat directly. So, if a Seurat object is created with versions under 4.0.0, they use the old Seurat Object class definition included in the package Seurat, and above 4.0.0 they follow the definition of the package SeuratObject. For this reason, the Seurat object from the paper has errors when loaded by Seurat 4.3.0, because it's missing some slots that are defined in the newest versions of the class, but not in version 3.0.1.
+
+## Object overview
+
+```{r}
+hca_esoph
+```
+
+The object contains:
+
+- Only 1 assay called "RNA"
+- 24245 genes (features)
+- 87947 barcodes (samples)
+- PCA and UMAP calculated
+
+## View the count table
+
+Inspect the count table for the only assay available (RNA).
+
+```{r}
+hca_esoph@assays$RNA@count
+```
+
+The counts are stored as floating point numbers (numeric), though they should be integers because they are counts. **Rounding to integers must be performed whenever the counts are used directly for calculations**.
+
+## Barcode and Feature names
+
+Check the barcode names in their object, to see how they handle the naming of barcodes for all of the samples merged into an object.
+
+```{r}
+head(colnames(hca_esoph@assays$RNA))
+```
+
+It seems that they append the unique name identifier of the FASTQ files to the barcode sequence (both separated by a "-1-" string). I will do the same to match their naming convention and be able to compare objects.
+
+Check all of the trailing codes after the barcode sequence.
+
+```{r}
+unique(gsub("[ACGT]{16}", "", colnames(hca_esoph)))
+```
+
+All of the barcodes have the "-1-" text followed by the unique file name of the sample/run. They seem to have analyzed the 23 runs. Including runs ending with `7413620`, `7413621` and `7413622` that we excluded from analysis due to their bad base quality.
+
+Check the gene (feature) names.
+
+```{r}
+head(rownames(hca_esoph@assays$RNA))
+```
+
+They seem to be using HGNC symbols.
+
+## View Metadata
+
+### Gene metadata
+
+Check the RNA assay with the count matrix information.
+
+```{r}
+head(hca_esoph@assays$RNA@meta.features)
+```
+
+The `meta.feature` slot of the RNA assay holds the Ensembl gene IDs mapped to each gene symbol. Normally this slot has the features as rownames and information for each feature/gene in columns. This object has the Ensembl IDs for each sample in a different column. I check if there are differences between IDs of different columns.
+
+```{r}
+# Check that adjacents pairs of columns are the same
+for (i in 2:dim(hca_esoph@assays$RNA@meta.features)[2]) {
+    print(i)
+    print(summary(hca_esoph@assays$RNA@meta.features[[i-1]] == hca_esoph@assays$RNA@meta.features[[i]]))
+}
+
+# Check if the NA values are the same in all columns
+for (x in hca_esoph@assays$RNA@meta.features) {
+    print(which(is.na(x)))
+}
+
+# See the names of the genes with missing Ensembl IDs (All columns have the same NAs)
+print(rownames(hca_esoph)[which(is.na(hca_esoph@assays$RNA@meta.features[[1]]))])
+```
+
+All of the columns with Ensembl IDs hold the same info.
+
+### Barcode metadata
+
+Check the barcode/cells metadata.
+
+```{r}
+colnames(hca_esoph@meta.data)
+```
+
+Output:
+
+> [1] "Donor"                       "Time"                       
+> [3] "donor_time"                  "organ"                      
+> [5] "patient"                     "sample"                     
+> [7] "n_genes"                     "percent_mito"               
+> [9] "n_counts"                    "leiden"                     
+> [11] "Celltypes_GenomeBiol_2019"   "Celltypes_updated_July_2020"
+
+There are several columns with barcode metadata. The column "leiden" holds the clustering assignment. Cell types for each barcode are assigned at the columns "Celltypes_GenomeBiol_2019" and "Celltypes_updated_July_2020". According to the columnns names, the second one seems to be the most recent, so I'll use this one for analyses.
+
+```{r}
+all(hca_esoph@active.idents == hca_esoph@meta.data$Celltypes_GenomeBiol_2019)
+```
+
+The active identities set in the object match with the "Celltypes_GenomeBiol_2019" column of the metadata, instead of the "updated" one I'm going to use. **If I have to use the identities, I'll have to replace them with the updated ones**.
+
+The "n_counts" and "n_genes" columns seem to have the statistics that Seurat normally saves to "nCount" and "nFeature". This change in name may be because they were calculated by an earlier version of Seurat or because they were generated manually. To be completely sure that these columns hold correct information, I will recalculate the values and compare them. I will use the internal Seurat function `Seurat:::CalcN` that is used to calculate internally the vectors. 
+
+```{r}
+# Round counts to integers because they are floating point numbers
+hca_esoph@assays$RNA@counts@x <- round(hca_esoph@assays$RNA@counts@x)
+
+# Recalculate nCount and nFeature
+esoph_stats <- Seurat:::CalcN(hca_esoph)
+
+# Compare nCount.
+summary(hca_esoph@meta.data$n_count == unname(esoph_stats$nCount))
+
+# Compare nFeature
+summary(hca_esoph@meta.data$n_genes == unname(esoph_stats$nFeature))
+```
+
+nCount is the same, but nFeature isn't. This has to be looked further into.
+
+## Plot UMAP
+
+Plot the authors cell annotation over their calculated UMAP embedding. This image should resemble the one in the scientific paper.
+
+```{r}
+# [nuptse]
+
+library(ggplot2)
+
+# Use the 'alphabet' color palette that is integrated in Seurat from the `pals` package
+p <- DimPlot(hca_esoph, reduction = "umap", group.by = "Celltypes_updated_July_2020", cols = 'alphabet', combine=FALSE)
+p2 <- p[[1]] + 
+    coord_fixed(ratio = 1) + 
+    labs(title = "HCA cell type annotation")
+
+results <- "/mnt/bazar/dario_TFM/2019.12.31_Meyer/data+analysis/esophagus/singlecell/results/extending_paper_analysis/embeddings"
+
+ggsave(plot = p2, filename =  paste0(results, "/clusters_umap.svg"), width = 3000, height = 3000, units = 'px', bg = 'white')
+ggsave(plot = p2, filename =  paste0(results, "/clusters_umap.png"), width = 3000, height = 3000, units = 'px', bg = 'white')
+```

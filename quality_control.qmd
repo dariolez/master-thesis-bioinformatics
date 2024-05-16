@@ -1,0 +1,45 @@
+# Quality control {#sec-qc}
+
+## Executing QC tools
+
+I run FastQC for every scRNA-seq file, and then aggregate the results with MultiQC.
+
+```bash
+cd /mnt/bazar/dario_TFM/2019.12.31_Meyer/esophagus/singlecell/data
+
+conda activate d_qc
+
+fastqc -t 8 $(find . -type f -name "*.fastq.gz")
+
+multiqc .
+```
+
+I organize the FastQC output files into folders.
+
+```bash
+cd /mnt/bazar/dario_TFM/2019.12.31_Meyer/esophagus/singlecell/data
+
+while read -r folder
+do
+    cd ${folder}
+    mkdir -p fastqc/
+    mv *.zip fastqc/
+    mv *fastqc.html fastqc/
+done < <(find $(pwd) -type d | tail -n +2)
+```
+
+## Interpreting the results
+
+The aggregated quality control results are available in the [quality_control_results](quality_control_results/multiqc_report.html) folder of the repository.
+
+Remarks from the results:
+
+- The files for "_R1" hold the UMIs --> all have the same lenght
+- The files for "_R2" hold the sequenced RNA --> there are 8 with 98 bp, 12 with 96 bp and 3 with 75 bp
+    - this may be a problem because the files should have 98 nt. According to [10x documentation](https://www.10xgenomics.com/support/single-cell-gene-expression/documentation/steps/sequencing/sequencing-requirements-for-single-cell-3).
+- 3 runs have a very bad per base quality report from FastQC, and will be excluded:
+    - HCATisStab7413620_S1_L001_R2_001
+    - HCATisStab7413621_S1_L001_R2_001
+    - HCATisStab7413622_S1_L001_R2_001
+
+The rest of the runs have good reports. Therefore, I will continue their analysis as they are.

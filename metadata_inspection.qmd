@@ -1,0 +1,113 @@
+# Metadata inspection {#sec-metadata-inspection}
+
+## Generating a summary metadata table {#sec-generate-summary-metadata-table}
+
+In the dowloaded file manifest and in the supplementary tables from the HCA, there is no direct relationship between single cell FASTQs, with BAMs and donor information. Some of the donor information only appears in the 2 tables of the Microsoft Excel Supplementary Table 1 from the paper, but not in the metadata associated with the sequencing files, while file information only appears in the file manifest. I need a table with all samples with donor information and associated sequencing FASTQ and BAM files. For this purpose, I'm going to join information in the file manifest and supplementary tables from the HCA to generate a summary table.
+
+To devise the information joining strategy, I looked at each column from each table and noted the columns with information that was relevant. Then, I  looked for columns with information to act as keys in the joining of tables. The strategy followed to create the summary table is portrayed in the following subsections.
+
+### Generate a donor metadata table
+
+I save the 2 tables in the Supplementary Table 1 Excel file, each into one CSV file, using LibreOffice Calc. I end up with two files "table_s1_donor_metadata.csv" and "table_s1_sample_info.csv". The "sample_info" table has the information ordered by sequencing file name. I want to have a table with one line per sequencing file, so I will join information from the other metadata tables into this file's structure.
+
+I join table "donor_metadata" into "sample_info" using the donor ID as key.
+
+```{bash}
+# [nuptse]
+
+csvtk join -f 'patient;ID' table_s1_sample_info.csv table_s1_donor_metadata.csv | \
+csvtk rename -f 'patient' -n 'donor' > table_s1_merged.csv
+```
+
+### Generate singlecell FASTQ table
+
+```{bash}
+# [nuptse]
+
+# 1) Filter the HCA metadata table for esophagus, single-cell and fastq files (cstk filter2)
+# 2) Subset the relevant columns from HCA metadata table (csvtk cut)
+# 3) Remove the ending part of the file names (csvtk replace)
+# 4) Remove remove the prefix of donors (csvtk replace)
+# 5) Rename columns (csvtk rename)
+# 6) Remove duplicated rows that are left after replacing strings (csvtk uniq)
+csvtk filter2 -f '$35=="esophagus" && $8=="fastq.gz" && $25=~"10x"' FileManifest.csv | \
+csvtk cut -f bundle_uuid,file_name,sample.biomaterial_core.biomaterial_id | \
+csvtk replace -f "file_name" -p '_.*$' -r '' | \
+#csvtk replace -f "donor_organism.biomaterial_core.biomaterial_id" -p '^CBTM-' -r '' | \
+csvtk rename -f 'bundle_uuid,file_name' -n 'bundle_uuid_sc_fastq,file_name_sc_fastq' | \
+csvtk uniq -f 1- > esophagus_singlecell_fastq.csv
+```
+
+### Generate singlecell BAM table
+
+```{bash}
+# [nuptse]
+
+# 1) Filter the HCA metadata table for esophagus, single-cell and BAM files (cstk filter2)
+# 2) Subset the relevant columns from HCA metadata table (csvtk cut)
+# 3) Remove the ending part of the file names (csvtk replace)
+# 4) Remove remove the prefix of donors (csvtk replace)
+# 5) Rename columns (csvtk rename)
+# 6) Remove duplicated rows, after  (csvtk uniq)
+csvtk filter2 -f '$35=="esophagus" && $8=="bam" && $25=~"10x"' FileManifest.csv | \
+csvtk cut -f bundle_uuid,file_name,sample.biomaterial_core.biomaterial_id | \
+csvtk replace -f "file_name" -p '_.*$' -r '' | \
+#csvtk replace -f "donor_organism.biomaterial_core.biomaterial_id" -p '^CBTM-' -r '' | \
+csvtk rename -f 'bundle_uuid,file_name' -n 'bundle_uuid_sc_bam,file_name_sc_bam' | \
+csvtk uniq -f 1- > esophagus_singlecell_bam.csv
+```
+
+### Combine tables into the summary table
+
+I join all of the tables that I have generated to create the summary table.
+
+```{bash}
+# [nuptse]
+
+# Join the single-cell FASTQ and BAM tables. (Both files have the same nº of rows, no left join needed)
+csvtk join -f 'sample.biomaterial_core.biomaterial_id' esophagus_singlecell_fastq.csv esophagus_singlecell_bam.csv | \
+csvtk cut -f -sample.biomaterial_core.biomaterial_id > esophagus_singlecell_fastq_bam.csv
+
+# Join the donor data to the single-cell data. (Inner join to remove all other data from non esophagus donors from table S1)
+csvtk join -f 'file_name_sc_fastq;sample' esophagus_singlecell_fastq_bam.csv table_s1_merged.csv > summary_table.csv
+```
+
+I reorganize the table columns and rows to have a final summary table.
+
+```{bash}
+# [nuptse]
+
+# 1) Order columns to have the order: file metadata, donor ID, donor metadata
+# 2) Sort rows by donor and timepoint
+csvtk cut -f 1-4,19-,5-18 summary_table_pre3.csv | \
+csvtk sort -k donor -k timepoint:u -L timepoint:<(printf "T0\n12h\n24h\n72h\n") > summary_table_wide.csv
+```
+
+---
+
+## Subsetting useful metadata tables
+
+### donor-bundle-timepoint table {#sec-metadata-donor-bundle-timepoint}
+
+```{bash}
+# [nuptse]
+
+csvtk fold -f donor,bundle_uuid_fastq -v timepoint summary_table_wide.csv > donor_bundle_timepoint_all.csv
+
+# Modify the timepoint names so that all start with "T"
+awk 'BEGIN{FS=","}; NR==1{print $0}; NR>1{gsub("^T","",$3); print $1","$2",T"$3}' donor_bundle_timepoint_all.csv > donor_bundle_timepoint_modified.csv
+
+# Create a table with the excluded bundles removed
+grep -v -f ../runs_excluded.fofn donor_bundle_timepoint_modidfied.csv > donor_bundle_timepoint.csv
+
+# Create a table without timepoints 72h
+csvtk filter2 -f '$3 != "T72h"' donor_bundle_timepoint.csv > donor_bundle_timepoint_mod_without72h.csv
+```
+
+### donor-tissue-timepoint table
+
+```{bash}
+# [nuptse]
+
+csvtk fold -f patient,organ -v timepoint table_s1_merged.csv | csvtk pretty | less -S
+```

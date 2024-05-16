@@ -1,0 +1,20 @@
+---
+execute:
+  eval: false
+---
+
+# Data download {#sec-data-download}
+
+:::{.callout-important}
+Be carefult to check that you have enough storage available before the download, as data can take up a few TBs.
+:::
+
+Data was downloaded from the Human Cell Atlas Data Portal [paper page](https://data.humancellatlas.org/explore/projects/c4077b3c-5c98-4d26-a614-246d12c2e5d7). The files that were of interest were selected, and a Bash command that was generated for download (which is only valid for 7 days) was used to download the files.
+
+```bash
+curl --location --fail 'https://service.azul.data.humancellatlas.org/manifest/files?catalog=dcp31&format=curl&filters=%7B%22projectId%22%3A+%7B%22is%22%3A+%5B%22c4077b3c-5c98-4d26-a614-246d12c2e5d7%22%2C+%22c4077b3c-5c98-4d26-a614-246d12c2e5d7%22%2C+%22c4077b3c-5c98-4d26-a614-246d12c2e5d7%22%5D%7D%2C+%22genusSpecies%22%3A+%7B%22is%22%3A+%5B%22Homo+sapiens%22%5D%7D%2C+%22fileFormat%22%3A+%7B%22is%22%3A+%5B%22fastq.gz%22%5D%7D%7D&objectKey=manifests%2Ff4015291-e300-5bf2-b6b9-e81ddac8c4e6.ca5182c0-4376-57e5-a328-f00b9a3a3252.curlrc' | curl --config -
+```
+
+::: {.callout-caution}
+On the 17/03/2024 the HCA Data Portal reindexed all of its files. In this process, all UUIDs for the files and bundles have been regenerated and don't match the previous ones. If you redownload the data, the folders in which the files are downloaded will be called completely different than the ones I downloaded before this date.
+:::

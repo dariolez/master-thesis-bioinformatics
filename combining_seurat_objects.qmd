@@ -1,0 +1,243 @@
+---
+execute:
+  eval: false
+---
+
+# Combining my Seurat and authors Seurat
+
+## Comparison of Seurat objects: my object vs paper object
+
+I compare our analysis with the paper authors one (as requested by Gabriel), with the objective of combining my counts with their object to plot velocity over their UMAP.
+
+Load Seurat saved objects into an clean R session.
+
+```{r}
+hca_esoph.orig <- readRDS("~/TFM/2019.12.31_Meyer/results/oesophagus_ts.rds")
+myesoph.orig <- readRDS("~/TFM/2019.12.31_Meyer/results/myesoph_star.rds")
+
+hca_esoph <- hca_esoph.orig
+myesoph <- myesoph.orig
+```
+
+### Comparing barcodes
+
+```{r}
+# Match barcodes between my Seurat object and the paper one
+bcs_common <- intersect(colnames(hca_esoph), colnames(myesoph))
+bcs_no_common <- colnames(hca_esoph)[! colnames(hca_esoph) %in% bcs_common]
+
+# Print the percentage of barcodes retrieved
+#data.frame("Number" = c(length(colnames(hca_esoph)), length(rownames(myesoph))), 
+#           row.names = c("hca_esoph", "myesoph"))
+c(length(colnames(hca_esoph)), length(colnames(myesoph)))
+pc_bcs_match <- (length(bcs_common) / length(colnames(hca_esoph))) * 100
+pc_bcs_nomatch <- length(bcs_no_common) / length(colnames(hca_esoph)) * 100
+cat("Matched barcodes: ", length(bcs_common), " / ", length(colnames(hca_esoph)), " (", pc_bcs_match, "%)\n", sep = "")
+cat("Non-matched barcodes: ", length(bcs_no_common), " / ", length(colnames(hca_esoph)), " (", pc_bcs_nomatch, "%)\n", sep = "")
+```
+
+We expect to see a 100% barcode match between the paper's Seurat object and mine. All of the barcodes in their object should appear in mine, because I basically didn't filter them. But I get a 77.52% match. The barcodes that appear in the paper object but not in mine come most probably from the 3 samples that I didn't include in the analysis. I'll check this.
+
+```{r}
+unique(gsub("[ACGT]{16}", "", colnames(hca_esoph)[! colnames(hca_esoph) %in% bcs_common]))
+pc_bcs <- (length(bcs_common) / length(grep(".*74136(20|21|22)", colnames(hca_esoph), invert = TRUE))) * 100
+cat("Matched barcodes:", pc_bcs, "%\n") 
+```
+
+All of the barcodes that don't match come from the 3 samples I removed from the analysis for their bad base quality. If I remove these barcodes/cells when calculating the match percentage between my object and the paper's, I get 100% match (as expected). It's surprising to see that the authors didn't remove this samples from the analysis.
+
+```{r, eval=FALSE}
+# Check barcodes names are identical
+summary(sort(grep(".*74136(20|21|22)", colnames(hca_esoph), invert = TRUE, value = TRUE)) == sort(colnames(myesoph)[colnames(myesoph) %in% bcs_common]))
+```
+
+### Comparing features
+
+```{r}
+# check common features:
+genes_common <- intersect(rownames(hca_esoph), rownames(myesoph))
+genes_no_common <- rownames(hca_esoph)[! rownames(hca_esoph) %in% genes_common]
+
+c(length(rownames(hca_esoph)), length(rownames(myesoph)))
+pc_genes_match <- length(genes_common) / length(rownames(hca_esoph)) * 100
+pc_genes_nomatch <- length(genes_no_common) / length(rownames(hca_esoph)) * 100
+cat("Matched genes: ", length(genes_common), " / ", length(rownames(hca_esoph)), " (", pc_genes_match, "%)\n", sep = "")
+cat("Non-matched genes: ", length(genes_no_common), " / ", length(rownames(hca_esoph)), " (", pc_genes_nomatch, "%)\n", sep = "")
+```
+
+There are 27.85% of gene names unmatched between objects. This percentage is quite high, I'm going to use the Ensembl gene IDs stored in the `meta.features` slot of the assays to see if I can match more.
+
+```{r}
+# Generate a new metadata column without the version numbers from the Ensembl IDs in myesoph assays
+myesoph@assays$spliced@meta.features[["ensembl_id_noversion"]] <- str_remove(myesoph@assays$spliced@meta.features$ensembl_id, "\\.\\d+")
+myesoph@assays$unspliced@meta.features[["ensembl_id_noversion"]] <- str_remove(myesoph@assays$unspliced@meta.features$ensembl_id, "\\.\\d+")
+
+# Match my merged object and the paper one
+# I take the first column of the paper object, because all are the same, and the spliced column
+# from my merged object because the spliced and unspliced ensembl IDs are identical
+ens_genes_common <- intersect(hca_esoph@assays$RNA@meta.features[[1]], myesoph@assays$spliced@meta.features$ensembl_id_noversion)
+ens_genes_no_common <- hca_esoph@assays$RNA@meta.features[[1]][! hca_esoph@assays$RNA@meta.features[[1]] %in% ens_genes_common]
+
+c(length(rownames(hca_esoph)), length(rownames(myesoph)))
+pc_ens_genes_match <- length(ens_genes_common) / length(rownames(hca_esoph)) * 100
+pc_ens_genes_nomatch <- length(ens_genes_no_common) / length(rownames(hca_esoph)) * 100
+cat("Matched genes: ", length(ens_genes_common), " / ", length(rownames(hca_esoph)), " (", pc_ens_genes_match, "%)\n", sep = "")
+cat("Non-matched genes: ", length(ens_genes_no_common), " / ", length(rownames(hca_esoph)), " (", pc_ens_genes_nomatch, "%)\n", sep = "")
+```
+
+Using Ensembl IDs 98.31% of genes match between objects. There are 410 Ensembl IDs (1.69%) in the paper's object that don't appear in my object. I check if some of these genes actually match by symbol but not ID, because of differences between the reference genomes used.
+
+```{r}
+# Get non matched gene symbols
+ens_genes_no_common_symbol <- rownames(hca_esoph)[! hca_esoph@assays$RNA@meta.features[[1]] %in% ens_genes_common]
+
+# See if all the non-match Ensembl IDs are included in the non-matched symbols
+# We would expect that all the genes whose Ensembl IDs don't match, also don't match by symbol
+no_common_ens_and_symbol <- intersect(genes_no_common, ens_genes_no_common_symbol)
+
+print(length(ens_genes_no_common))
+print(length(no_common_ens_and_symbol))
+
+# Get genes whose Ensembl ID doesn't match but the symbol does
+ens_genes_no_common[ens_genes_no_common_symbol %in% genes_common]
+ens_genes_no_common_symbol[ens_genes_no_common_symbol %in% genes_common]
+```
+
+There are 33 genes that match by symbol but not by Ensembl ID. This is probably due to changes and deprecations in Ensembl IDs between the reference genome the paper authors used and the one that I used. Keeping these genes would improve the match between objects in 0.14%. Such a little improvement isn't worth the effort that would take to add them to the match. I looked if there are any noticeably important genes, and it doesn't seem so. I'll skip these genes.
+
+### Subsetting objects and merging
+
+Subset the paper's object and my merged object so that they have the same barcodes (columns) and genes (rows).
+
+```{r}
+# RESTRICT TO COMMON BARCODES
+# Remove the samples that I didn't include from the paper's object
+hca_esoph <- subset(hca_esoph, cells = grep(".*74136(20|21|22)", colnames(hca_esoph), invert = TRUE, value = TRUE))
+# Remove the barcodes that don't appear in the paper's object
+myesoph <- subset(myesoph, cells = bcs_common)
+
+# RESTRICT TO COMMON FEATURES
+hca_esoph <- subset(hca_esoph, features = rownames(hca_esoph)[hca_esoph@assays$RNA@meta.features[["gene.ids-HCATisStab7413619"]] %in% ens_genes_common])
+myesoph <- subset(myesoph, features = rownames(myesoph)[myesoph@assays$spliced@meta.features$ensembl_id_noversion %in% ens_genes_common])
+```
+
+Check that the Seurat objects have columns and rows ordered equally, before joining the objects.
+
+```{r}
+# Check that the barcodes are identical and ordered equally
+summary(colnames(hca_esoph) == colnames(myesoph))
+
+# Check that the features/genes are identical and ordered equally
+summary(rownames(hca_esoph) == rownames(myesoph))  # this will be FALSE (different HGNC symbols)
+summary(hca_esoph[["RNA"]]@meta.features[[1]] == myesoph[["spliced"]]@meta.features$ensembl_id_noversion)
+```
+
+Barcodes (columns) are ordered identically. But features (rows) don't match between objects, as expected. Each one has HGNC symbols, which are not guaranteed to match, and genes are most probably ordered differently. To add my count matrices to the paper's object I need to match Ensembl IDs and re-order the rows (genes) in my merged object.
+
+Reorder genes and add my object's assays to the paper's object.
+
+```{r}
+# Match rows in my merged object with the papers object to reorder them before merging
+hca_myspliced_match <- match(hca_esoph@assays$RNA@meta.features[[1]], myesoph@assays$spliced@meta.features$ensembl_id_noversion)
+hca_myunspliced_match <- match(hca_esoph@assays$RNA@meta.features[[1]], myesoph@assays$unspliced@meta.features$ensembl_id_noversion)
+
+# Check that we will store the genes correctly
+summary(myesoph[["spliced"]]@meta.features$ensembl_id_noversion[hca_myspliced_match] == hca_esoph@assays$RNA@meta.features[[1]])
+summary(myesoph[["unspliced"]]@meta.features$ensembl_id_noversion[hca_myunspliced_match] == hca_esoph@assays$RNA@meta.features[[1]])
+```
+
+```{r}
+# Add my assays to the papers object
+hca_esoph[["spliced"]] <- CreateAssayObject(myesoph@assays$spliced@counts[hca_myspliced_match, ])
+hca_esoph[["unspliced"]] <- CreateAssayObject(myesoph@assays$unspliced@counts[hca_myunspliced_match, ])
+```
+
+If you don't want to use the Ensembl IDs, and match only HGCN symbols, do the following.
+
+```{r, eval=FALSE}
+hca_esoph[["spliced"]] <- CreateAssayObject(myesoph@assays$spliced@counts)
+hca_esoph[["unspliced"]] <- CreateAssayObject(myesoph@assays$unspliced@counts)
+```
+
+Compare counts from the papers assay with my assays.
+
+::: {.callout-note}
+To calculate `nCounts` manually do: `Matrix::colSums(seuratobject@assays$name@counts)`
+To calculate `nFeature` manually do: ``
+
+If you try to do `Matrix::colSums(seuratobject[["name"]])`, it will sum the values in the slot `data` that is were normalization values are stored, and the results will be all wrong.
+:::
+
+Compare counts for spliced and unspliced separately.
+
+```{r}
+# Compare total reads per barcode (nCount) for RNA vs. Spliced & Unspliced
+pdf(file="results/nCount_comparison.pdf")
+axis_max <- round_any(max(hca_esoph$nCount_RNA, hca_esoph$nCount_spliced), 10, ceiling)
+plot(hca_esoph$nCount_RNA, hca_esoph$nCount_spliced, xlim = c(0, axis_max), ylim = c(0, axis_max))
+lines(c(0, axis_max), c(0, axis_max), col = "red", lty = 2)
+plot(hca_esoph$nCount_RNA, hca_esoph$nCount_unspliced, xlim = c(0, axis_max), ylim = c(0, axis_max))
+lines(c(0, axis_max), c(0, axis_max), col = "red", lty = 2)
+dev.off()
+
+summary(hca_esoph$nCount_RNA)
+summary(hca_esoph$nCount_spliced)
+```
+
+Compare features for spliced and unspliced separately.
+
+```{r}
+# Compare number of genes per barcode (nFeature) for RNA vs Spliced & Unspliced
+pdf(file="results/nFeature_comparison.pdf")
+axis_max <- round_any(max(hca_esoph$nFeature_RNA, hca_esoph$nFeature_spliced), 10, ceiling)
+plot(hca_esoph$nFeature_RNA, hca_esoph$nFeature_spliced, xlim = c(0, axis_max), ylim = c(0, axis_max))
+lines(c(0, axis_max), c(0, axis_max), col = "red", lty = 2)
+plot(hca_esoph$nFeature_RNA, hca_esoph$nFeature_unspliced, xlim = c(0, axis_max), ylim = c(0, axis_max))
+lines(c(0, axis_max), c(0, axis_max), col = "red", lty = 2)
+dev.off()
+
+summary(hca_esoph$nFeature_RNA)
+summary(hca_esoph$nFeature_spliced)
+```
+
+Compare counts and features for spliced and unspliced of my object combined against the paper object.
+
+```{r}
+# Compare nCount and nFeature for RNA vs Spliced+Unspliced
+pdf(file="results/nCount_nFeature_comparison.pdf")
+axis_max <- round_any(max(hca_esoph$nCount_RNA, hca_esoph$nCount_spliced), 10, ceiling)
+plot(hca_esoph$nCount_RNA, (hca_esoph$nCount_spliced + hca_esoph$nCount_unspliced), xlim = c(0, axis_max), ylim = c(0, axis_max))
+lines(c(0, axis_max), c(0, axis_max), col = "red", lty = 2)
+title("nCount")
+axis_max <- round_any(max(hca_esoph$nFeature_RNA, hca_esoph$nFeature_spliced), 10, ceiling)
+plot(hca_esoph$nFeature_RNA, (hca_esoph$nFeature_spliced + hca_esoph$nFeature_unspliced), xlim = c(0, axis_max), ylim = c(0, axis_max))
+lines(c(0, axis_max), c(0, axis_max), col = "red", lty = 2)
+title("nFeature")
+dev.off()
+
+summary(hca_esoph$nFeature_RNA)
+summary(hca_esoph$nFeature_spliced)
+```
+
+Calculate difference between my reads and the paper reads.
+
+```{r}
+summary((hca_esoph$nCount_spliced + hca_esoph$nCount_unspliced) - hca_esoph$nCount_RNA)
+summary((hca_esoph$nFeature_spliced + hca_esoph$nFeature_unspliced) - hca_esoph$nFeature_RNA)
+
+# Calculate the difference between my object and the paper's in percentage value
+# A result of 0%, would be that both objects are identical, positive values mean my object has more counts
+(( sum(hca_esoph$nCount_spliced + hca_esoph$nCount_unspliced) / sum(hca_esoph$nCount_RNA) ) - 1 ) * 100
+(( sum(hca_esoph$nFeature_spliced + hca_esoph$nFeature_unspliced) / sum(hca_esoph$nFeature_RNA) ) - 1 ) * 100
+```
+
+Judging by the plots comparing the sum of spliced+unspliced against the paper counts and the summary statistics, we conclude that:
+
+- The paper object has more reads per barcode than my object in average (nCount). My object has -11.5% reads less than the paper object. This could be because of the UMI deduplication strategy used, I used the default "1MM All" of STARsolo, but if you use "Exact", you could recover more reads per barcode. But there are other possible explanations.
+- My object has more genes per barcode than the paper object in average (nFeature). My object has +9.33% genes per barcode more than the paper object. This could be happening because I haven't done any filtering at all compared to paper object. But again, there could be other explanations. 
+
+### Save comparison object
+
+```{r}
+saveRDS(hca_esoph, file="results/hca_myesoph.rds")
+```

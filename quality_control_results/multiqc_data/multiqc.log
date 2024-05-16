@@ -1,0 +1,21 @@
+[2023-10-09 14:08:10,606] multiqc                                            [DEBUG  ]  This is MultiQC v1.16
+[2023-10-09 14:08:10,606] multiqc                                            [DEBUG  ]  Command used: /opt/miniconda3/envs/d_qc/bin/multiqc .
+[2023-10-09 14:08:11,280] multiqc                                            [DEBUG  ]  Latest MultiQC version is v1.16
+[2023-10-09 14:08:11,280] multiqc                                            [DEBUG  ]  Working dir : /mnt/bazar/dario_TFM/10.1186_s13059-019-1906-x/esophagus/singlecell
+[2023-10-09 14:08:11,280] multiqc                                            [DEBUG  ]  Template    : default
+[2023-10-09 14:08:11,280] multiqc                                            [DEBUG  ]  Running Python 3.11.6 | packaged by conda-forge | (main, Oct  3 2023, 10:40:35) [GCC 12.3.0]
+[2023-10-09 14:08:11,281] multiqc                                            [DEBUG  ]  Analysing modules: custom_content, ccs, ngsderive, purple, conpair, lima, peddy, somalier, methylQA, mosdepth, phantompeakqualtools, qualimap, preseq, hifiasm, quast, qorts, rna_seqc, rockhopper, rsem, rseqc, busco, bustools, goleft_indexcov, gffcompare, disambiguate, supernova, deeptools, sargasso, verifybamid, mirtrace, happy, mirtop, sambamba, gopeaks, homer, hops, macs2, theta2, snpeff, gatk, htseq, bcftools, featureCounts, fgbio, dragen, dragen_fastqc, dedup, pbmarkdup, damageprofiler, mapdamage, biobambam2, jcvi, mtnucratio, picard, vep, sentieon, bakta, prokka, qc3C, nanostat, samblaster, samtools, sexdeterrmine, eigenstratdatabasetools, bamtools, jellyfish, vcftools, longranger, stacks, varscan2, snippy, umitools, bbmap, bismark, biscuit, diamond, hicexplorer, hicup, hicpro, salmon, kallisto, slamdunk, star, hisat2, tophat, bowtie2, bowtie1, cellranger, snpsplit, odgi, pangolin, nextclade, freyja, humid, kat, leehom, librarian, adapterRemoval, bbduk, clipandmerge, cutadapt, flexbar, sourmash, kaiju, kraken, malt, motus, trimmomatic, sickle, skewer, sortmerna, biobloomtools, fastq_screen, afterqc, fastp, fastqc, filtlong, prinseqplusplus, pychopper, porechop, pycoqc, minionqc, anglerfish, multivcfanalyzer, clusterflow, checkqc, bcl2fastq, bclconvert, interop, ivar, flash, seqyclean, optitype, whatshap
+[2023-10-09 14:08:11,281] multiqc                                            [DEBUG  ]  Using temporary directory for creating report: /tmp/tmpfq00x7o2
+[2023-10-09 14:08:11,287] multiqc                                            [INFO   ]  Search path : /mnt/bazar/dario_TFM/10.1186_s13059-019-1906-x/esophagus/singlecell
+[2023-10-09 14:08:12,946] multiqc                                            [DEBUG  ]  Summary of files that were skipped by the search: [skipped_module_specific_max_filesize: 613] // [skipped_no_match: 138] // [skipped_ignore_pattern: 69]
+[2023-10-09 14:08:13,741] multiqc.plots.bargraph                             [DEBUG  ]  Using matplotlib version 3.8.0
+[2023-10-09 14:08:13,741] multiqc.plots.linegraph                            [DEBUG  ]  Using matplotlib version 3.8.0
+[2023-10-09 14:08:13,742] multiqc                                            [DEBUG  ]  No samples found: custom_content
+[2023-10-09 14:08:14,455] multiqc.modules.fastqc.fastqc                      [INFO   ]  Found 69 reports
+[2023-10-09 14:08:14,667] multiqc.utils.software_versions                    [DEBUG  ]  Reading software versions from config.software_versions
+[2023-10-09 14:08:14,706] multiqc                                            [DEBUG  ]  Compressing plot data
+[2023-10-09 14:08:15,052] multiqc                                            [INFO   ]  Report      : multiqc_report.html
+[2023-10-09 14:08:15,052] multiqc                                            [INFO   ]  Data        : multiqc_data
+[2023-10-09 14:08:15,052] multiqc                                            [DEBUG  ]  Moving data file from '/tmp/tmpfq00x7o2/multiqc_data' to '/mnt/bazar/dario_TFM/10.1186_s13059-019-1906-x/esophagus/singlecell/multiqc_data'
+[2023-10-09 14:08:15,085] multiqc                                            [DEBUG  ]  Full report path: /mnt/bazar/dario_TFM/10.1186_s13059-019-1906-x/esophagus/singlecell/multiqc_report.html
+[2023-10-09 14:08:15,172] multiqc                                            [INFO   ]  MultiQC complete

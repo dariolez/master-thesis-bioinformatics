@@ -1,0 +1,325 @@
+# Installations {#sec-installations}
+
+This page collects the installation steps followed to install the software used throughout the master thesis. 
+
+## Operating System
+
+All code was executed in computers running Ubuntu 22.04.4 LTS. And therefore making use of default installed tools through the terminal like GNU Bash and the GNU coreutils. 
+
+## Tools for CSV/TSV manipulation
+
+I installed some tools to work with CSV and TSV files directly in the terminal. 
+
+- For CSVs (and sometimes TSVs) I downloaded a binary for [csvtk](https://github.com/shenwei356/csvtk).
+- For TSVs I downloaded the binaries for [tsv-utils](https://github.com/eBay/tsv-utils).
+
+## Conda/Mamba
+
+Most of the software that I used was installed using conda/mamba environments when possible. I'll write the purpose of the environment as well as the commands that I used to create them (including non conda/mamba commands that aren't registered by conda/mamba).
+
+::: {.callout-important}
+## Be careful with conda and R
+
+Not all R packages are available for installation through the conda channels. So, in some of my R environments, I had to install R packages using the R way. **This is not a recommended way to work** as conda/mamba cannot keep track of changes made by R to the conda R installation. Once you install something using R, your environment cannot be reproduced alone using conda, you will have to execute the R installations manually. Also, any new installations or updates using conda/mamba can break the environment as they don't take into account the R changes. Although in my case this didn't happen, it is still not a recommended way to work.
+
+When you install R in conda, the installation can be found at `<path_to_conda_folder>/envs/<environment_name>/lib/R/` (repace the text between angle brackets with your conda system installation and environment name). That is, every package that you install with conda/mamba or directly with R will be inside of this folder. Even if conda doesn't see some packages because they were installed using R.
+:::
+
+## Conda/Mamba environment setup {#sec-conda-envs}
+
+Configuring the miniconda3/mamba installation to have more channels and different priorities.
+
+```{bash}
+mamba config --add channels bioconda
+mamba config --add channels conda-forge
+```
+
+View the configured channels in conda/mamba: 
+
+```{bash}
+conda config --show channels
+```
+
+## `d_rstudio` {#sec-d-rstudio}
+
+| **Purpose:** to have a functional RStudio installation along with the packages for the kallisto-bustools velocity workflow.
+| **Creation:**
+| I run the following commands to install RStudio along with the packages that I will need for scRNA data analysis. 
+
+```bash
+mamba create -n d_rstudio -c conda-forge rstudio-desktop jupyter r-seurat
+
+conda activate d_rstudio
+
+mamba install r-devtools r-tidyverse r-zeallot r-ggally bioconductor-bsgenome.mmusculus.ucsc.mm10 bioconductor-dropletutils bioconductor-annotationhub bioconductor-singler
+
+# Install packages from source
+
+R
+
+# Hard-code the commit for reproducibility
+devtools::install_github("BUStools/BUSpaRse@5b23c9b609ea20259110eb2592720a6019751a90")  # this can be installed through conda-forge
+
+# Hard-code the commit for reproducibility
+devtools::install_github("satijalab/seurat-wrappers@73466e361ee759c6b1add58faa3bc4e7a2ee5753")
+
+q()
+
+# Posterior installations
+mamba install r-velocyto.r
+
+mamba install bioconductor-bsgenome.hsapiens.ucsc.hg38
+
+mamba install bioconductor-biomart
+```
+
+Later I removed unused packages:
+
+```bash
+mamba remove bioconductor-bsgenome.hsapiens.ucsc.hg38 bioconductor-bsgenome.mmusculus.ucsc.mm10
+```
+
+Installing a package for clustering with Seurat:
+
+```bash
+mamba install leidenalg
+mamba install numpy pandas
+```
+
+Installing packages to convert to H5AD data
+
+```bash
+R
+
+# Hard-code commit for future reproducibility. Skip updates when asked
+devtools::install_github("mojaveazure/seurat-disk@877d4e18ab38c686f5db54f8cd290274ccdbe295")
+```
+
+Package for command line argument parsing.
+
+```bash
+mamba install -c conda-forge r-optparse
+```
+
+Package for hyperparameter optimization.
+
+```bash
+mamba install -c conda-forge r-clustree
+```
+
+Package for trajectory inference
+
+```bash
+mamba install -c bioconda bioconductor-slingshot
+```
+
+Tool for outputting svgs.
+
+```bash
+mamba install -c conda-forge r-svglite
+```
+
+Install package sceasy for scRNA-seq format conversion (Seurat - AnnData mainly). And install loompy because it's required by sceasy for conversion to/from loom format.
+
+```bash
+mamba install -c bioconda r-sceasy
+mamba install -c conda-forge loompy
+```
+ 
+Install package MuDataSeurat for Seurat - MuData/AnnData format conversion.
+
+```bash
+R
+
+# Skip updates when asked
+remotes::install_github("pmbio/MuDataSeurat@e34e9082a3da029e6b21f7a93a193a2cc0d69245")
+```
+
+Installing the jupyter bash kernel for Quarto documents.
+
+```bash
+mamba install -c conda-forge bash_kernel
+```
+
+Installing "plotly" package for Python and the "kaleido" package to save plots generated with Plotly. And also the deprecated "orca" package and its dependency "processx"
+
+```bash
+mamba install -c conda-forge plotly python-kaleido
+mamba install -c plotly plotly-orca
+mamba install -c conda-forge r-processx
+```
+
+Install maftools for variant analysis.
+
+```bash
+mamba install -c bioconda bioconductor-maftools
+```
+
+Install the pals package to have more color palettes available for plotting.
+
+```default
+mamba install -c conda-forge r-pals
+```
+
+Install BSgenome GRCh38 reference genome.
+
+```default
+mamba install -c bioconda bioconductor-bsgenome.hsapiens.ucsc.hg38
+```
+
+Install NMF package for maftools muation signature analysis.
+
+```default
+mamba install -c conda-forge r-nmf
+```
+
+Install packages to plot venn diagrams.
+
+```default
+mamba install -c conda-forge r-ggvenn r-ggvenndiagram r-venn r-venndiagram
+```
+
+## `d_sratools` {#sec-d-sratools}
+
+| **Purpose:** to have SRA tools isolated in an environment to be able to download files from SRA
+| **Creation:**
+
+```bash
+mamba create -n d_sratools sra-tools
+```
+
+## `d_samtools` {#sec-d-samtools}
+
+| **Purpose:** to have samtools, bcftools and related htslib tools isolated in an environment.
+| **Creation:**
+
+```bash
+mamba create -n d_samtools -c conda-forge -c bioconda samtools bcftools
+```
+
+## `d_scomatic` {#sec-d-scomatic}
+
+| **Purpose:** to have an isolated environment with SComatic for scRNA-seq mutation calling
+| **Creation:**
+
+I create a conda environment for SComatic. I follow the instructions in the [tool's GitHub](https://github.com/cortes-ciriano-lab/SComatic).
+
+```bash
+mamba create -n d_scomatic -c bioconda python=3.7 r-base=3.6.1 samtools datamash bedtools
+```
+
+I download SComatic from the GitHub repo.
+
+```bash
+# A) You can download a zip file with the repository "Code" button in the web
+# B) Or you can do the same thing in the linux terminal
+# For future reproducibility
+wget -P /home/dario/bin/ https://github.com/cortes-ciriano-lab/SComatic/archive/f515f4ee3e7c128600215d21992c051c16e0a03f.zip
+# To grab the latest branch
+wget -P /home/dario/bin/ https://github.com/cortes-ciriano-lab/SComatic/archive/main.zip
+
+unzip *zip
+mv SComatic-main SComatic
+
+# You could also clone the repository to keep the files up to date if needed
+git clone --single-branch https://github.com/cortes-ciriano-lab/SComatic.git /home/dario/bin/
+```
+
+I install the remaining dependencies as instructed, using the "requirements.txt" file in the repository.
+
+```bash
+mamba activate d_scomatic
+
+pip install -r requirements.txt
+```
+
+## `d_qc` {#sec-d-qc}
+
+| **Purpose:** to have all the quality control tools for sequencing data analysis (FastQC, MultiQC, RSeQC)
+| **Creation:**
+
+```bash
+mamba create -n d_qc fastqc multiqc rseqc
+```
+
+Install Qualimap for alignment quality control.
+
+```bash
+mamba install -c bioconda qualimap
+```
+
+## `d_scanpy` {#sec-d-scanpy}
+
+| **Purpose:** scRNA analysis with python. Environment for the scverse tools.
+| **Creation:** 
+
+```bash
+mamba create -n d_scanpy -c conda-forge scanpy scvelo leidenalg
+```
+
+## `d_igv` {#sec-d-igv}
+
+| **Purpose:** install a genome browser to visualize alignments and other info.
+| **Creation:** 
+
+```bash
+mamba create -n d_igv igv
+
+mamba install igvtools igv-reports
+```
+
+## `d_vep` {#sec-d-vep}
+
+| **Purpose:** Have a conda environment for the Variant Effect Predictor (VEP) from Ensembl
+| **Creation:**
+
+I'll install Ensemble-VEP from a prepared package in Bioconda. This isn't [the official](https://github.com/Ensembl/ensembl-vep?tab=readme-ov-file#install) way to install VEP, but it allows ease of installation and reproducibility through conda.
+
+```bash
+mamba create -n d_vep -c conda-forge -c bioconda --override-channels ensembl-vep
+```
+
+I install the cache for the human reference genome (**CAUTION: This takes up 26 GiB**).
+
+```bash
+vep_install -a cf -s homo_sapiens -y GRCh38
+```
+
+Install vcf2maf for VCF to MAF conversion (that requires VEP).
+
+```bash
+mamba install -c bioconda vcf2maf
+```
+
+## `d_gatk` {#sec-d-gatk}
+
+| **Purpose:** Have a conda/mamba environment for the GATK (Genome Analysis Toolkit)
+| **Creation:**
+
+```bash
+mamba create -n d_gatk gatk4
+```
+
+## `d_picard` {#sec-d-picard}
+
+| **Purpose:** Have a conda/mamba environment with Picard tools.
+| **Creation:**
+
+```bash
+mamba create -n d_picard picard
+```
+
+## `d_bwa` {#sec-d-bwa}
+
+| **Purpose:** Have a conda/mamba environment with bwa for short read alignment
+| **Creation:**
+
+```bash
+mamba create -n d_bwa -c bioconda bwa
+```
+
+Install samtools into the environmente, because it's needed by bwa.
+
+```bash
+mamba install -c bioconda samtools
+```

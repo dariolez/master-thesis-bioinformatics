@@ -1,0 +1,43 @@
+project:
+  type: book
+  output-dir: docs
+
+book:
+  title: "Master thesis"
+  author: "Darío González"
+  date: last-modified
+  date-format: "DD/MM/YYYY, HH:mm:ss"
+
+  search: false
+  repo-url: https://github.com/dariolez/master-thesis-bioinformatics
+  sidebar:
+    style: floating
+    collapse-level: 1
+  page-navigation: true
+
+  chapters:
+    - index.qmd
+    - installations.qmd
+    - data_download.qmd
+    - metadata_inspection.qmd
+    - quality_control.qmd
+    - inspection_authors_seurat.qmd
+    - part: "Trajectory inference analysis"
+      chapters:
+        - alignment_starsolo.qmd
+        - joining_count_matrices.qmd
+        - combining_seurat_objects.qmd
+        - trajectory_inference.qmd
+  #appendices:
+  #  -
+
+execute:
+  enabled: false
+  eval: false
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 5
+    toc-expand: 2

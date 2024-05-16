@@ -1,0 +1,283 @@
+---
+execute:
+  eval: false
+---
+
+# Aligning scRNA-seq with STARsolo {#sec-alignment-starsolo}
+
+There are many tools for performing alignment of reads from a sequencing experiment. `STAR` is one of the most popular aligners, and its version for RNA velocity called `STARsolo` is popular too.
+
+::: {.callout-note}
+## Links for STAR
+
+| STAR: <https://github.com/alexdobin/STAR>
+| STAR manual: <https://github.com/alexdobin/STAR/blob/master/doc/STARmanual.pdf>
+| STARsolo manual: <https://github.com/alexdobin/STAR/blob/master/docs/STARsolo.md>
+:::
+
+## Index the reference genome
+
+Before aligning reads, we have to generate an index for the reference genome for STAR to work.
+
+```{bash}
+# [folia]
+
+cd ~/TFM/reference_genomes/
+
+mkdir STAR_index
+
+~/bin/STAR_2.7.11a/Linux_x86_64_static/STAR \
+    --runMode genomeGenerate \
+    --genomeDir STAR_index/ \
+    --genomeFastaFiles Homo_sapiens.GRCh38.dna.primary_assembly.fa \
+    --sjdbGTFfile Homo_sapiens.GRCh38.110.gtf \
+    --runThreadN 10 \
+    |& tee logs/star_index.log
+```
+
+## Align samples
+
+I align all samples with using Bash script called "star_align.sh".
+
+```{bash}
+#!/bin/bash
+#
+# AUTHOR: Darío González
+# DESCRIPTION: Shell script to run STAR in the lab server folia.
+
+# Assign arguments to variables
+input_file=$(realpath $1)
+
+# Change to the working directory in folia
+mkdir -p /home/dario/TFM/2019.12.31_Meyer/STAR_align/
+cd /home/dario/TFM/2019.12.31_Meyer/STAR_align
+
+# Read names of files and process them
+while read -r folder
+do
+    # State the file being processed
+    run=$(basename ${folder})
+    echo -e "\n[ $(date +'%Y/%m/%d %T.%3N') ] Processing files in ${run}\n"
+
+    # Transfer files from nuptse to folia
+    rsync -avR --progress -hh dario@nuptse:/mnt/bazar/dario_TFM/2019.12.31_Meyer/data+analysis/esophagus/singlecell/data/./${run}/*.fastq.gz .
+
+    # Create a folder for the results
+    cd ${run}
+    #rm -rf STAR_out
+    mkdir -p STAR_out
+
+    # Process files
+    ~/bin/STAR_2.7.11a/Linux_x86_64_static/STAR \
+        --runMode alignReads \
+        --genomeDir /home/dario/TFM/reference_genomes/STAR_index/ \
+        --outFileNamePrefix STAR_out/ \
+        --readFilesCommand zcat \
+        --readFilesIn *_R2_*.fastq.gz *_R1_*.fastq.gz \
+        --soloType CB_UMI_Simple \
+        --soloCBwhitelist /home/dario/TFM/10x_barcodes/737K-august-2016.txt \
+        --soloCBstart 1 \
+        --soloCBlen 16 \
+        --soloUMIstart 17 \
+        --soloUMIlen 10 \
+        --soloStrand Forward \
+        --soloFeatures Gene GeneFull Velocyto \
+        --outSAMattributes NH HI nM AS CR UR CB UB GX GN sS sQ sM \
+        --outSAMtype BAM SortedByCoordinate \
+        --runThreadN 10
+
+    # Transfer result files back to nuptse
+    rsync -av --progress -hh STAR_out dario@nuptse:/mnt/bazar/dario_TFM/2019.12.31_Meyer/data+analysis/esophagus/singlecell/data/${run}/
+
+    # Clean up
+    cd ..
+    rm -rf ${run}
+    echo -e "\n[ $(date +'%Y/%m/%d %T.%3N') ] Finished processing ${run}"
+done < ${input_file}
+
+# Remove working directory
+rmdir /home/dario/TFM/2019.12.31_Meyer/STAR_align/
+```
+
+Options explanation (full explanation in the [manual](https://github.com/alexdobin/STAR/blob/master/doc/STARmanual.pdf)):
+
+- `--runMode alignReads`: run STAR to aling reads (this is the default behaviour)
+- `--genomeDir`: directory where the indexed reference genome is located
+- `--readFilesIn`: input the sequencing files (FASTQs). For scRNA-seq, the file that holds the barcode+UMI sequences goes at the end.
+- `--readFilesCommand`: this specifies a command to decompress the input sequence files.
+- `--soloType CB_UMI_Simple`: specifies that we are mapping reads that come from 10x Chromium or Drop-seq scRNA-seq sequencing technologies
+- `--soloCBwhitelist`: give STAR the file of barcodes used in the sequencing so that it can correct sequencing errors in the barcodes.
+- `--soloStrand Forward`: specify the strandness of the reads. By default it's forward.
+- `--soloFearues Velocyto`: genomic features for which the UMI counts per Cell Barcode are counted. You can choose from. [Gene, SJ, GeneFull, GeneFull ExonOverIntron, GeneFull Ex50pAS, Velocyto]. More than one option can be specified here.
+- `--soloCellFilter None`: Cell filtering parameters. By default STAR filters similar to what cellranger does.
+- `--soloMultiMappers`: tell STAR what to do about multimapping reads. By default, STAR only keeps unique mapping reads, and discards any multimapping.
+
+You have to tell STARsolo where the barcode and UMIs are in the sequence file that you pass it. By default it's configured to get the sequences for 10x 3' v2. If you use a different scRNA-seq technology from 10x 3' v2, then you have to specify the barcode and UMI length:
+
+`--soloCBstart 1`: cell barcode start base
+`--soloCBlen 16`: cell barcode length
+`--soloUMIstart 17`: UMI start base
+`--soloUMIlen 10`: UMI length
+
+I run my script.
+
+```{bash}
+# [folia]
+
+cd /home/dario/TFM/scripts/
+
+./star_align.sh ../data/runs.fofn |& tee ../logs/star_align.log
+```
+
+::: {.callout-warning}
+If you are low on storage, STAR will fail to generate a BAM file, due to insufficient storage it stops before it can finish and the BAM will be left incomplete. But STAR won't give any errors or warnings. To know if your BAM files are complete run `samtools quickcheck <file>`. This will check for any errors in the BAM file format. If you had low storage during STAR's run, the EOF (End-Of-File) block that should mark the end of the BAM file will be missing because the BAM is incomplete.
+
+```{bash}
+# Check BAM integrity
+for i in $(cat runs.fofn); do samtools quickcheck ${i}/STAR_out/Aligned.sortedByCoord.out.bam && echo "OK" || echo "Fail!"; done
+
+# Check BAM size
+for i in $(cat runs.fofn); do du -h ${i}/STAR_out/Aligned.sortedByCoord.out.bam; done
+```
+:::
+
+Remove write permissions for all users to avoid accidental deletions of the alignment files.
+
+```{bash}
+# [nuptse]
+
+cd /mnt/bazar/dario_TFM/2019.12.31_Meyer/data+analysis/esophagus/singlecell/data
+
+for i in $(find -type d -name STAR_out); do chmod -R a-w $i; done
+```
+
+## Checking read loss
+
+It would be interesting to know how many reads where recovered from the original raw FASTQs after the alignment. I check the read loss after each processing step that STAR performs using a Bash script.
+
+```{bash}
+#!/bin/bash
+#
+# AUTHOR: Darío González
+# DESCRIPTION: Calculate loss of sequencing reads in each step of the scRNA-seq analysis pipeline
+
+# Create function to print statistics for each run
+function reads_stats() {
+    
+    FOLDER=$1
+
+    # get read counts for each step of the pipeline
+    original=$(unzip -p fastqc/*_R2_*_fastqc.zip *_R2_001_fastqc/fastqc_data.txt | grep "Total Sequences" | awk '{print $3}')
+    corrected=$(grep -E "yes*" ${FOLDER}/Solo.out/Barcodes.stats | sed -E 's/^\s+//g; s/\s+/\t/g' | awk 'BEGIN{total=0} {total += $2} END{print total}')
+    unique_aligned=$(grep "Uniquely mapped reads number" ${FOLDER}/Log.final.out | sed -E "s/^\s+//g; s/\s{2,}/\t/g" | awk 'BEGIN{FS="\t"} {print $2}')
+    spliced=$(tail -n +4 ${FOLDER}/Solo.out/Velocyto/raw/spliced.mtx | cut -d ' ' -f 3 | awk 'BEGIN{total=0} {total += $1} END{print total}')
+    unspliced=$(tail -n +4 ${FOLDER}/Solo.out/Velocyto/raw/unspliced.mtx | cut -d ' ' -f 3 | awk 'BEGIN{total=0} {total += $1} END{print total}')
+    ambiguous=$(tail -n +4 ${FOLDER}/Solo.out/Velocyto/raw/ambiguous.mtx | cut -d ' ' -f 3 | awk 'BEGIN{total=0} {total += $1} END{print total}')
+    spliced_unspliced=$(($spliced + $unspliced))
+    total=$(($spliced + $unspliced + $ambiguous))
+    
+
+    # Calculate percentages
+    original_pc=100
+    corrected_pc=$(echo "(${corrected}/${original}) * 100" | bc -l)
+    unique_aligned_pc=$(echo "(${unique_aligned}/${original}) * 100" | bc -l)
+    spliced_pc=$(echo "(${spliced}/${original}) * 100" | bc -l)
+    unspliced_pc=$(echo "(${unspliced}/${original}) * 100" | bc -l)
+    ambiguous_pc=$(echo "(${ambiguous}/${original}) * 100" | bc -l)
+    spliced_unspliced_pc=$(echo "(${spliced_unspliced}/${original}) * 100" | bc -l)
+    total_pc=$(echo "(${total}/${original}) * 100" | bc -l)
+
+    # Output read counts
+    LC_NUMERIC=en_US.UTF-8  # to have the decimal separator set as a point
+
+    printf "step\tnumber_reads\tpercentage\n"
+    printf "original\t%s\t%.2f\n" $original $original_pc
+    printf "corrected\t%s\t%.2f\n" $corrected $corrected_pc
+    printf "unique_aligned\t%s\t%.2f\n" $unique_aligned $unique_aligned_pc
+    printf "spliced\t%s\t%.2f\n" $spliced $spliced_pc
+    printf "unspliced\t%s\t%.2f\n" $unspliced $unspliced_pc
+    printf "ambiguous\t%s\t%.2f\n" $ambiguous $ambiguous_pc
+    printf "spliced+unspliced\t%s\t%.2f\n" $spliced_unspliced $spliced_unspliced_pc
+    printf "spliced+unspliced+ambiguous\t%s\t%.2f\n" $total $total_pc
+}
+
+# Get folder names
+run_folders=$1
+
+# Set variables
+FOLDER=STAR_out
+
+# Run stats function for all runs
+while read -r run_folder; do
+    cd $run_folder
+    run=$(basename ${run_folder})
+    
+    mkdir -p ${run_folder}/${FOLDER}/read_stats
+    reads_stats $FOLDER > ${run_folder}/${FOLDER}/read_stats/read_stats_STAR.tsv
+
+    cd ..
+done < ${run_folders}
+```
+
+I run my Bash script to generate read loss statistics for all samples.
+
+```{bash}
+./read_stats_STAR.sh ../data/runs.fofn
+```
+
+Summarize read loss statistics using my pre-existing python scripts.
+
+```{bash}
+python join_read_loss.py --wd /mnt/bazar/dario_TFM/2019.12.31_Meyer/data+analysis/esophagus/singlecell data/runs.fofn /STAR_out/read_stats/read_stats_STAR.tsv results/read_loss_STAR/read_loss_STAR.tsv
+
+python read_loss_summary_plot.py -o ../results/read_loss_STAR/ -n read_loss_STAR ../results/read_loss_STAR/read_loss_STAR.tsv
+
+python read_loss_plot.py ../data/runs.fofn STAR_out/read_stats/reads_loss_STAR.tsv read_loss_STAR.html
+```
+
+## Check duplication levels
+
+There is a steep read loss between the alignment step and the count matrices. I have been told that this is normal, and that it happens because there is a deduplication of repeated UMIs. I'm going to look into the UMI duplication levels of one of my samples to assess this.
+
+```{bash}
+# [nuptse]
+
+cd /mnt/bazar/dario_TFM/2019.12.31_Meyer/data+analysis/esophagus/singlecell/data/018f7a89-f540-4845-9d2f-f7bde863a008/STAR_out
+
+mamba activate d_samtools
+
+# Get the Corrected barcodes and UMIs
+samtools view Aligned.sortedByCoord.out.bam | awk '{gsub("CB:Z:", "", $23); gsub("UB:Z:", "", $24); print $23, $24}' > CBUB.txt
+
+# Count each combination
+sort CBUB.txt | uniq -c | sed -E 's/^\s+//g' > CBUB.count.txt
+
+# Count the duplicated reads
+awk 'BEGIN{dup=0} {if($2 != "-"){ if($1 > 1){dup += ($1-1)} } } END{print dup}' CBUB.count.txt
+
+# Output: 68882416
+```
+
+182.190.451 - 68.882.416 = 113.308.035 final reads
+
+In the count matrix there are 96.015.296 total reads, which is less than what I got. This can be explained because STAR uses the option `--soloUMIdedup 1MM_All`, that groups UMIs with 1 mismatch between each other, if I had used `--soloUMIdedup Exact` the number of reads in the count matrix would match mine.
+
+## Inspecting the alignment visually
+
+I index all BAM files from STARsolo to visualize them in IGV.
+
+```{bash}
+# [nuptse]
+
+for i in $(find . -maxdepth 3 -name *bam); do echo $i; samtools index -b -@ 4 $i; done
+```
+
+Prepare reference genome annotation for visualization.
+
+```{bash}
+# [nuptse]
+
+igvtools sort Homo_sapiens.GRCh38.110.gtf Homo_sapiens.GRCh38.110.sortedByCoord.gtf
+
+igvtools index Homo_sapiens.GRCh38.110.sortedByCoord.gtf
+```
