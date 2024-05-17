@@ -117,7 +117,7 @@ head(seu1y2@assays$spliced@meta.features)
 
 The `merge()` function from Seurat doesn't keep the `meta.feature` information in the merge object. So I'll have to add it directly to the final merged object.
 
-### Merging all samples/runs {#sec-merging-all-samples}
+## Merging all samples/runs {#sec-merging-all-samples}
 
 I create a file with the runs/samples folder names and the file names for 10x samples. This will allow me to get the file that is being processed with their folder name and then append their corresponding file name.
 
